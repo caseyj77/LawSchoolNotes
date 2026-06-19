@@ -1,15 +1,27 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
+const router = useRouter()
 const notesStore = useNotesStore()
 
 const classId = computed(() => route.params.classId)
 const cls = computed(() => notesStore.getClassById(classId.value))
 const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
+
+function handleDeleteClass() {
+  const count = briefs.value.length
+  const message =
+    count > 0
+      ? `Delete "${cls.value.title}" and its ${count} case brief${count === 1 ? '' : 's'}?`
+      : `Delete "${cls.value.title}"?`
+  if (!window.confirm(message)) return
+  notesStore.deleteClass(classId.value)
+  router.push('/')
+}
 </script>
 
 <template>
@@ -21,13 +33,21 @@ const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
           <h2>{{ cls.title }}</h2>
         </div>
         <p class="supporting-copy">{{ cls.focus }}</p>
+        <button type="button" class="danger" @click="handleDeleteClass">Delete class</button>
       </div>
     </article>
 
     <article class="panel">
       <p class="label">Outline</p>
-      <p class="supporting-copy">No outline yet.</p>
+      <p v-if="cls.outline" class="supporting-copy outline-preview" v-html="cls.outline"></p>
+      <p v-else class="supporting-copy">No outline yet.</p>
       <RouterLink :to="`/class/${classId}/outline`">Open outline builder</RouterLink>
+    </article>
+
+    <article class="panel">
+      <p class="label">Document reader</p>
+      <p class="supporting-copy">Read a case and build your brief side by side.</p>
+      <RouterLink :to="`/class/${classId}/reader`">Open document reader</RouterLink>
     </article>
 
     <article class="panel">
@@ -114,5 +134,25 @@ h2 {
 
 .citation {
   color: #6b7280;
+}
+
+.outline-preview {
+  max-height: 4.8rem;
+  overflow: hidden;
+}
+
+.outline-preview :deep(p) {
+  margin: 0 0 0.5rem;
+}
+
+.danger {
+  justify-self: start;
+  padding: 0.6rem 1rem;
+  border: 1px solid #b91c1c;
+  border-radius: 0.9rem;
+  background: #fff;
+  color: #b91c1c;
+  cursor: pointer;
+  font: inherit;
 }
 </style>

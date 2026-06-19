@@ -2,6 +2,7 @@
 import { computed, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import BriefSectionsForm from '@/components/BriefSectionsForm.vue'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
@@ -16,14 +17,15 @@ const brief = reactive(
   existing ? { ...existing } : notesStore.createBlankBrief(route.params.classId),
 )
 
-const sections = computed(() => [
-  ['Facts', brief.facts || 'Summarize the legally significant facts.'],
-  ['Issue', brief.issue || 'Frame the question the court answered.'],
-  ['Rule', brief.rule || 'State the governing rule or legal standard.'],
-  ['Analysis', brief.analysis || 'Capture how the court applied the rule.'],
-  ['Conclusion', brief.conclusion || 'Note the disposition or takeaway.'],
-  ['Student Notes', brief.studentNotes || 'Add any notes for yourself.'],
-])
+const richSections = [
+  ['Facts', 'facts', 'Summarize the legally significant facts.'],
+  ['Issue', 'issue', 'Frame the question the court answered.'],
+  ['Rule', 'rule', 'State the governing rule or legal standard.'],
+  ['Analysis', 'analysis', 'Capture how the court applied the rule.'],
+  ['Conclusion', 'conclusion', 'Note the disposition or takeaway.'],
+]
+
+const studentNotesPreview = computed(() => brief.studentNotes || 'Add any notes for yourself.')
 
 function handleSave() {
   notesStore.saveCaseBrief(brief)
@@ -61,46 +63,7 @@ function handleSave() {
           >
         </label>
 
-        <label>
-          Facts
-          <textarea v-model.trim="brief.facts" rows="4" placeholder="What happened?"></textarea>
-        </label>
-
-        <label>
-          Issue
-          <textarea
-            v-model.trim="brief.issue"
-            rows="3"
-            placeholder="What legal question did the court resolve?"
-          ></textarea>
-        </label>
-
-        <label>
-          Rule
-          <textarea
-            v-model.trim="brief.rule"
-            rows="3"
-            placeholder="What rule controlled the outcome?"
-          ></textarea>
-        </label>
-
-        <label>
-          Analysis
-          <textarea
-            v-model.trim="brief.analysis"
-            rows="4"
-            placeholder="How did the court reason through the issue?"
-          ></textarea>
-        </label>
-
-        <label>
-          Conclusion
-          <textarea
-            v-model.trim="brief.conclusion"
-            rows="3"
-            placeholder="What should you remember for class or exams?"
-          ></textarea>
-        </label>
+        <BriefSectionsForm :brief="brief" />
 
         <label>
           Student notes
@@ -121,9 +84,14 @@ function handleSave() {
       <p v-if="brief.citation" class="citation">{{ brief.citation }}</p>
 
       <dl>
-        <div v-for="[title, content] in sections" :key="title" class="preview-section">
+        <div v-for="[title, key, placeholder] in richSections" :key="key" class="preview-section">
           <dt>{{ title }}</dt>
-          <dd>{{ content }}</dd>
+          <dd v-if="brief[key]" v-html="brief[key]"></dd>
+          <dd v-else class="placeholder">{{ placeholder }}</dd>
+        </div>
+        <div class="preview-section">
+          <dt>Student Notes</dt>
+          <dd>{{ studentNotesPreview }}</dd>
         </div>
       </dl>
     </article>
@@ -228,5 +196,25 @@ dd {
   margin: 0;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+dd.placeholder {
+  color: #a8a29e;
+  white-space: normal;
+}
+
+dd :deep(p) {
+  margin: 0 0 0.5rem;
+}
+
+dd :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+dd :deep(blockquote) {
+  margin: 0.5rem 0;
+  padding-left: 0.85rem;
+  border-left: 3px solid #e7e5e4;
+  color: #57534e;
 }
 </style>

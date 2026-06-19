@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import CaseBriefsView from '@/views/CaseBriefsView.vue'
 import ClassView from '@/views/ClassView.vue'
 import CourseOutlinesView from '@/views/CourseOutlinesView.vue'
+import DocumentReaderView from '@/views/DocumentReaderView.vue'
 import OutlineBuilderView from '@/views/OutlineBuilderView.vue'
 
 export const routes = [
@@ -30,6 +31,12 @@ export const routes = [
     path: '/class/:classId/case-briefs/:briefId',
     name: 'case-brief-edit',
     component: CaseBriefsView,
+  },
+  {
+    path: '/class/:classId/reader',
+    name: 'reader',
+    component: DocumentReaderView,
+    props: true,
   },
 ]
 

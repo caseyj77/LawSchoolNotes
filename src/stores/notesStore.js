@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
+import { useActiveBriefStore } from '@/stores/activeBriefStore'
+
 const STORAGE_KEY = 'law-school-notes'
 
 const seedClasses = [
@@ -8,18 +10,23 @@ const seedClasses = [
     id: 'contracts',
     title: 'Contracts',
     focus: 'Formation, consideration, performance, and remedies.',
+    outline: '',
   },
   {
     id: 'torts',
     title: 'Torts',
     focus: 'Intentional torts, negligence, strict liability, and defenses.',
+    outline: '',
   },
   {
     id: 'civil-procedure',
     title: 'Civil Procedure',
     focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
+    outline: '',
   },
 ]
+
+const CLASSES_STORAGE_KEY = 'law-school-classes'
 
 function loadCaseBriefs() {
   const stored = localStorage.getItem(STORAGE_KEY)
@@ -32,8 +39,19 @@ function loadCaseBriefs() {
   }
 }
 
+function loadClasses() {
+  const stored = localStorage.getItem(CLASSES_STORAGE_KEY)
+  if (!stored) return seedClasses
+
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return seedClasses
+  }
+}
+
 export const useNotesStore = defineStore('notes', () => {
-  const classes = ref(seedClasses)
+  const classes = ref(loadClasses())
   const caseBriefs = ref(loadCaseBriefs())
 
   watch(
@@ -44,8 +62,33 @@ export const useNotesStore = defineStore('notes', () => {
     { deep: true },
   )
 
+  watch(
+    classes,
+    (value) => {
+      localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(value))
+    },
+    { deep: true },
+  )
+
+  function addClass({ title, focus }) {
+    const created = { id: crypto.randomUUID(), title, focus, outline: '' }
+    classes.value.push(created)
+    return created
+  }
+
   function getClassById(id) {
     return classes.value.find((cls) => cls.id === id)
+  }
+
+  function updateOutline(classId, html) {
+    const cls = getClassById(classId)
+    if (!cls) return
+    cls.outline = html
+  }
+
+  function deleteClass(id) {
+    classes.value = classes.value.filter((cls) => cls.id !== id)
+    caseBriefs.value = caseBriefs.value.filter((brief) => brief.classId !== id)
   }
 
   function getBriefsForClass(classId) {
@@ -60,11 +103,12 @@ export const useNotesStore = defineStore('notes', () => {
     if (!brief.id) {
       brief.id = crypto.randomUUID()
       caseBriefs.value.push(brief)
-      return
+    } else {
+      const existing = getBriefById(brief.id)
+      Object.assign(existing, brief)
     }
 
-    const existing = getBriefById(brief.id)
-    Object.assign(existing, brief)
+    useActiveBriefStore().setActiveBriefForClass(brief.classId, brief.id)
   }
 
   function createBlankBrief(classId) {
@@ -81,13 +125,24 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  function createAndSaveBrief({ classId, caseName }) {
+    const brief = { ...createBlankBrief(classId), caseName, id: crypto.randomUUID() }
+    caseBriefs.value.push(brief)
+    useActiveBriefStore().setActiveBriefForClass(classId, brief.id)
+    return brief
+  }
+
   return {
     classes,
     caseBriefs,
+    addClass,
     getClassById,
+    updateOutline,
+    deleteClass,
     getBriefsForClass,
     getBriefById,
     saveCaseBrief,
     createBlankBrief,
+    createAndSaveBrief,
   }
 })
