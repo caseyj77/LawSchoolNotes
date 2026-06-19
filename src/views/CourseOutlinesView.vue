@@ -1,21 +1,7 @@
 <script setup>
-const outlines = [
-  {
-    title: 'Contracts',
-    focus: 'Formation, consideration, performance, and remedies.',
-    materials: ['Reading notes', 'Cold-call cases', 'Exam attack outline'],
-  },
-  {
-    title: 'Torts',
-    focus: 'Intentional torts, negligence, strict liability, and defenses.',
-    materials: ['Rule statements', 'Policy arguments', 'Practice hypos'],
-  },
-  {
-    title: 'Civil Procedure',
-    focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
-    materials: ['FRCP references', 'Timeline checklist', 'Professor lecture recap'],
-  },
-]
+import { useNotesStore } from '@/stores/notesStore'
+
+const notesStore = useNotesStore()
 </script>
 
 <template>
@@ -33,13 +19,15 @@ const outlines = [
       </div>
 
       <div class="outline-list">
-        <article v-for="outline in outlines" :key="outline.title" class="outline-card">
-          <h3>{{ outline.title }}</h3>
-          <p>{{ outline.focus }}</p>
-          <ul>
-            <li v-for="item in outline.materials" :key="item">{{ item }}</li>
-          </ul>
-        </article>
+        <RouterLink
+          v-for="cls in notesStore.classes"
+          :key="cls.id"
+          :to="`/class/${cls.id}`"
+          class="outline-card"
+        >
+          <h3>{{ cls.title }}</h3>
+          <p>{{ cls.focus }}</p>
+        </RouterLink>
       </div>
     </article>
   </section>
@@ -102,21 +90,19 @@ h2 {
 }
 
 .outline-card {
+  display: block;
   padding: 1.25rem;
   border-radius: 1rem;
   background: #f8fafc;
+  text-decoration: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.outline-card:hover {
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
 }
 
 .outline-card p {
   line-height: 1.6;
-}
-
-ul {
-  padding-left: 1.2rem;
-  margin-bottom: 0;
-}
-
-li + li {
-  margin-top: 0.45rem;
 }
 </style>

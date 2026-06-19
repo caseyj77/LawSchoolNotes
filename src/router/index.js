@@ -1,7 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import CaseBriefsView from '@/views/CaseBriefsView.vue'
+import ClassView from '@/views/ClassView.vue'
 import CourseOutlinesView from '@/views/CourseOutlinesView.vue'
+import OutlineBuilderView from '@/views/OutlineBuilderView.vue'
 
 export const routes = [
   {
@@ -10,8 +12,23 @@ export const routes = [
     component: CourseOutlinesView,
   },
   {
-    path: '/case-briefs',
-    name: 'case-briefs',
+    path: '/class/:classId',
+    name: 'class',
+    component: ClassView,
+  },
+  {
+    path: '/class/:classId/outline',
+    name: 'outline-builder',
+    component: OutlineBuilderView,
+  },
+  {
+    path: '/class/:classId/case-briefs/new',
+    name: 'case-brief-new',
+    component: CaseBriefsView,
+  },
+  {
+    path: '/class/:classId/case-briefs/:briefId',
+    name: 'case-brief-edit',
     component: CaseBriefsView,
   },
 ]

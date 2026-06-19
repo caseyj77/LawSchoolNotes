@@ -12,8 +12,7 @@ import { RouterLink, RouterView } from 'vue-router'
         sections you need for school.
       </p>
       <nav class="nav">
-        <RouterLink to="/">Course outlines</RouterLink>
-        <RouterLink to="/case-briefs">Case briefs</RouterLink>
+        <RouterLink to="/">Classes</RouterLink>
       </nav>
     </section>
 

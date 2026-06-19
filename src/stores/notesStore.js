@@ -1,0 +1,93 @@
+import { defineStore } from 'pinia'
+import { ref, watch } from 'vue'
+
+const STORAGE_KEY = 'law-school-notes'
+
+const seedClasses = [
+  {
+    id: 'contracts',
+    title: 'Contracts',
+    focus: 'Formation, consideration, performance, and remedies.',
+  },
+  {
+    id: 'torts',
+    title: 'Torts',
+    focus: 'Intentional torts, negligence, strict liability, and defenses.',
+  },
+  {
+    id: 'civil-procedure',
+    title: 'Civil Procedure',
+    focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
+  },
+]
+
+function loadCaseBriefs() {
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (!stored) return []
+
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return []
+  }
+}
+
+export const useNotesStore = defineStore('notes', () => {
+  const classes = ref(seedClasses)
+  const caseBriefs = ref(loadCaseBriefs())
+
+  watch(
+    caseBriefs,
+    (value) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value))
+    },
+    { deep: true },
+  )
+
+  function getClassById(id) {
+    return classes.value.find((cls) => cls.id === id)
+  }
+
+  function getBriefsForClass(classId) {
+    return caseBriefs.value.filter((brief) => brief.classId === classId)
+  }
+
+  function getBriefById(id) {
+    return caseBriefs.value.find((brief) => brief.id === id)
+  }
+
+  function saveCaseBrief(brief) {
+    if (!brief.id) {
+      brief.id = crypto.randomUUID()
+      caseBriefs.value.push(brief)
+      return
+    }
+
+    const existing = getBriefById(brief.id)
+    Object.assign(existing, brief)
+  }
+
+  function createBlankBrief(classId) {
+    return {
+      classId,
+      caseName: '',
+      citation: '',
+      facts: '',
+      issue: '',
+      rule: '',
+      analysis: '',
+      conclusion: '',
+      studentNotes: '',
+    }
+  }
+
+  return {
+    classes,
+    caseBriefs,
+    getClassById,
+    getBriefsForClass,
+    getBriefById,
+    saveCaseBrief,
+    createBlankBrief,
+  }
+})
