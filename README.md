@@ -13,8 +13,8 @@ A Vue 3 + Vite workspace for organizing course outlines and drafting case briefs
 
 This repository includes:
 
-- `/home/runner/work/LawSchoolNotes/LawSchoolNotes/CLAUDE.md` for repository context used by Claude Code in local sessions.
-- `/home/runner/work/LawSchoolNotes/LawSchoolNotes/.github/workflows/claude.yml` for `@claude`-triggered GitHub automation on issues and PRs.
+- `CLAUDE.md` for repository context used by Claude Code in local sessions.
+- `.github/workflows/claude.yml` for `@claude`-triggered GitHub automation on issues and PRs.
 
 ### Local setup
 
