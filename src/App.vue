@@ -13,6 +13,8 @@ import { RouterLink, RouterView } from 'vue-router'
       </p>
       <nav class="nav">
         <RouterLink to="/">Classes</RouterLink>
+        <RouterLink to="/login">Log in</RouterLink>
+        <RouterLink to="/signup">Create account</RouterLink>
       </nav>
     </section>
 

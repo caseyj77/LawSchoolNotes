@@ -4,13 +4,25 @@ import CaseBriefsView from '@/views/CaseBriefsView.vue'
 import ClassView from '@/views/ClassView.vue'
 import CourseOutlinesView from '@/views/CourseOutlinesView.vue'
 import DocumentReaderView from '@/views/DocumentReaderView.vue'
+import LoginView from '@/views/LoginView.vue'
 import OutlineBuilderView from '@/views/OutlineBuilderView.vue'
+import SignUpView from '@/views/SignUpView.vue'
 
 export const routes = [
   {
     path: '/',
     name: 'course-outlines',
     component: CourseOutlinesView,
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: LoginView,
+  },
+  {
+    path: '/signup',
+    name: 'signup',
+    component: SignUpView,
   },
   {
     path: '/class/:classId',
