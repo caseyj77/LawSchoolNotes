@@ -38,6 +38,18 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('Civil Procedure')
   })
 
+  it('adds a new class from the home route and links to it', async () => {
+    const wrapper = await mountApp('/')
+
+    await wrapper.get('input[placeholder="Class name"]').setValue('Evidence')
+    await wrapper.get('input[placeholder="Focus (optional)"]').setValue('Relevance and hearsay.')
+    await wrapper.get('.new-class-form').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Evidence')
+    expect(wrapper.find('a[href*="/class/"]').exists()).toBe(true)
+  })
+
   it('creates a case brief with a citation and student notes from the class view', async () => {
     const wrapper = await mountApp('/class/contracts')
 

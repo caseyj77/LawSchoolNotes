@@ -21,6 +21,8 @@ const seedClasses = [
   },
 ]
 
+const CLASSES_STORAGE_KEY = 'law-school-classes'
+
 function loadCaseBriefs() {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (!stored) return []
@@ -32,8 +34,19 @@ function loadCaseBriefs() {
   }
 }
 
+function loadClasses() {
+  const stored = localStorage.getItem(CLASSES_STORAGE_KEY)
+  if (!stored) return seedClasses
+
+  try {
+    return JSON.parse(stored)
+  } catch {
+    return seedClasses
+  }
+}
+
 export const useNotesStore = defineStore('notes', () => {
-  const classes = ref(seedClasses)
+  const classes = ref(loadClasses())
   const caseBriefs = ref(loadCaseBriefs())
 
   watch(
@@ -43,6 +56,20 @@ export const useNotesStore = defineStore('notes', () => {
     },
     { deep: true },
   )
+
+  watch(
+    classes,
+    (value) => {
+      localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(value))
+    },
+    { deep: true },
+  )
+
+  function addClass({ title, focus }) {
+    const created = { id: crypto.randomUUID(), title, focus }
+    classes.value.push(created)
+    return created
+  }
 
   function getClassById(id) {
     return classes.value.find((cls) => cls.id === id)
@@ -84,6 +111,7 @@ export const useNotesStore = defineStore('notes', () => {
   return {
     classes,
     caseBriefs,
+    addClass,
     getClassById,
     getBriefsForClass,
     getBriefById,

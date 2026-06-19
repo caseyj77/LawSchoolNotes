@@ -1,7 +1,20 @@
 <script setup>
+import { ref } from 'vue'
+
 import { useNotesStore } from '@/stores/notesStore'
 
 const notesStore = useNotesStore()
+
+const newTitle = ref('')
+const newFocus = ref('')
+
+function handleAddClass() {
+  const title = newTitle.value.trim()
+  if (!title) return
+  notesStore.addClass({ title, focus: newFocus.value.trim() })
+  newTitle.value = ''
+  newFocus.value = ''
+}
 </script>
 
 <template>
@@ -29,6 +42,15 @@ const notesStore = useNotesStore()
           <p>{{ cls.focus }}</p>
         </RouterLink>
       </div>
+
+      <form class="new-class-form" @submit.prevent="handleAddClass">
+        <p class="label">New class</p>
+        <div class="new-class-fields">
+          <input v-model.trim="newTitle" type="text" placeholder="Class name" required>
+          <input v-model.trim="newFocus" type="text" placeholder="Focus (optional)">
+          <button type="submit">Add class</button>
+        </div>
+      </form>
     </article>
   </section>
 </template>
@@ -104,5 +126,36 @@ h2 {
 
 .outline-card p {
   line-height: 1.6;
+}
+
+.new-class-form {
+  border-top: 1px solid #e7e5e4;
+  padding-top: 1.25rem;
+}
+
+.new-class-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.new-class-fields input {
+  flex: 1;
+  min-width: 10rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #d6d3d1;
+  border-radius: 0.9rem;
+  font: inherit;
+  background: #fffdfb;
+}
+
+.new-class-fields button {
+  padding: 0.7rem 1.2rem;
+  border: 1px solid #1f2937;
+  border-radius: 0.9rem;
+  background: #1f2937;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
 }
 </style>
