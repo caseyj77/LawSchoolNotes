@@ -3,8 +3,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { flushPromises, mount } from '@vue/test-utils'
 
+import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
+import { createSupabaseMock } from '@/lib/__tests__/supabaseTestUtils'
+
 import App from '../App.vue'
 import { routes } from '../router'
+
+const defaultTemplateSections = [
+  { id: 'sec-facts', template_id: DEFAULT_TEMPLATE_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
+  { id: 'sec-issue', template_id: DEFAULT_TEMPLATE_ID, key: 'issue', label: 'Issue', placeholder: '', position: 2 },
+  { id: 'sec-rule', template_id: DEFAULT_TEMPLATE_ID, key: 'rule', label: 'Rule', placeholder: '', position: 3 },
+  { id: 'sec-analysis', template_id: DEFAULT_TEMPLATE_ID, key: 'analysis', label: 'Analysis', placeholder: '', position: 4 },
+  { id: 'sec-conclusion', template_id: DEFAULT_TEMPLATE_ID, key: 'conclusion', label: 'Conclusion', placeholder: '', position: 5 },
+]
+
+let supabaseMock
+
+vi.mock('@/lib/supabaseClient', () => ({
+  get supabase() {
+    return supabaseMock
+  },
+}))
 
 async function mountApp(path) {
   const router = createRouter({
@@ -28,6 +47,7 @@ async function mountApp(path) {
 describe('LawSchoolNotes app', () => {
   beforeEach(() => {
     localStorage.clear()
+    supabaseMock = createSupabaseMock({ template_sections: defaultTemplateSections })
   })
 
   it('shows the course outlines view on the home route', async () => {

@@ -24,6 +24,8 @@ const outlineHtml = computed({
   set: (value) => notesStore.updateOutline(classId.value, value),
 })
 
+const isLoading = ref(true)
+const templateSections = ref([])
 const activeBriefId = ref(null)
 const activeBrief = computed(() =>
   activeBriefId.value ? notesStore.getBriefById(activeBriefId.value) : null,
@@ -40,10 +42,14 @@ const captureMissingBriefMessage = ref('')
 const pendingCapture = ref(null)
 const menuPosition = ref(null)
 
-onMounted(() => {
+onMounted(async () => {
+  templateSections.value = await notesStore.getTemplateSections()
+  await notesStore.loadBriefsForClass(classId.value)
+
   const lastActiveId = activeBriefStore.getActiveBriefForClass(classId.value)
   const stillExists = lastActiveId && notesStore.getBriefById(lastActiveId)
   activeBriefId.value = stillExists ? lastActiveId : briefs.value[0]?.id ?? null
+  isLoading.value = false
 })
 
 function handleSelectChange(event) {
@@ -56,11 +62,11 @@ function handleSelectChange(event) {
   activeBriefStore.setActiveBriefForClass(classId.value, value)
 }
 
-function handleCreateBrief() {
+async function handleCreateBrief() {
   const caseName = newBriefName.value.trim()
   if (!caseName) return
 
-  const created = notesStore.createAndSaveBrief({ classId: classId.value, caseName })
+  const created = await notesStore.createAndSaveBrief({ classId: classId.value, caseName })
   activeBriefId.value = created.id
   newBriefName.value = ''
   isCreatingBrief.value = false
@@ -100,7 +106,11 @@ function handleSelectOutline() {
 </script>
 
 <template>
-  <section v-if="cls" class="content-grid">
+  <section v-if="isLoading" class="content-grid">
+    <p>Loading document reader…</p>
+  </section>
+
+  <section v-else-if="cls" class="content-grid">
     <header class="reader-header">
       <p class="label">Document reader</p>
       <h2>{{ cls.title }}</h2>
@@ -159,7 +169,12 @@ function handleSelectOutline() {
 
           <p v-if="captureMissingBriefMessage" class="warning">{{ captureMissingBriefMessage }}</p>
 
-          <BriefSectionsForm v-if="activeBrief" ref="briefSectionsFormRef" :brief="activeBrief" />
+          <BriefSectionsForm
+            v-if="activeBrief"
+            ref="briefSectionsFormRef"
+            :brief="activeBrief"
+            :template-sections="templateSections"
+          />
           <p v-else class="supporting-copy">No brief selected for this class yet.</p>
         </article>
       </div>
@@ -168,6 +183,7 @@ function handleSelectOutline() {
     <CaptureMenu
       v-if="pendingCapture"
       :position="menuPosition"
+      :template-sections="templateSections"
       @select-section="handleSelectSection"
       @select-outline="handleSelectOutline"
       @close="closeMenu"

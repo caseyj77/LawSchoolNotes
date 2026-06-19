@@ -1,19 +1,12 @@
 <script setup>
 import { ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   position: { type: Object, required: true },
+  templateSections: { type: Array, required: true },
 })
 
 const emit = defineEmits(['select-section', 'select-outline', 'close'])
-
-const sections = [
-  { key: 'facts', label: 'Facts' },
-  { key: 'issue', label: 'Issue' },
-  { key: 'rule', label: 'Rule' },
-  { key: 'analysis', label: 'Analysis' },
-  { key: 'conclusion', label: 'Conclusion' },
-]
 
 const briefExpanded = ref(false)
 </script>
@@ -29,7 +22,7 @@ const briefExpanded = ref(false)
     </button>
 
     <ul v-if="briefExpanded" class="submenu">
-      <li v-for="section in sections" :key="section.key">
+      <li v-for="section in props.templateSections" :key="section.key">
         <button type="button" @click="emit('select-section', section.key)">
           {{ section.label }}
         </button>

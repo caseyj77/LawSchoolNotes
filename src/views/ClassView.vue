@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useNotesStore } from '@/stores/notesStore'
@@ -11,15 +11,21 @@ const notesStore = useNotesStore()
 const classId = computed(() => route.params.classId)
 const cls = computed(() => notesStore.getClassById(classId.value))
 const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
+const isLoading = ref(true)
 
-function handleDeleteClass() {
+onMounted(async () => {
+  await notesStore.loadBriefsForClass(classId.value)
+  isLoading.value = false
+})
+
+async function handleDeleteClass() {
   const count = briefs.value.length
   const message =
     count > 0
       ? `Delete "${cls.value.title}" and its ${count} case brief${count === 1 ? '' : 's'}?`
       : `Delete "${cls.value.title}"?`
   if (!window.confirm(message)) return
-  notesStore.deleteClass(classId.value)
+  await notesStore.deleteClass(classId.value)
   router.push('/')
 }
 </script>
@@ -52,7 +58,8 @@ function handleDeleteClass() {
 
     <article class="panel">
       <p class="label">Case briefs</p>
-      <ul v-if="briefs.length" class="brief-list">
+      <p v-if="isLoading" class="supporting-copy">Loading case briefs…</p>
+      <ul v-else-if="briefs.length" class="brief-list">
         <li v-for="brief in briefs" :key="brief.id">
           <RouterLink :to="`/class/${classId}/case-briefs/${brief.id}`">
             {{ brief.caseName || 'Untitled case brief' }}

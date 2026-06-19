@@ -3,15 +3,8 @@ import SectionEditor from '@/components/SectionEditor.vue'
 
 const props = defineProps({
   brief: { type: Object, required: true },
+  templateSections: { type: Array, required: true },
 })
-
-const sections = [
-  { key: 'facts', label: 'Facts', placeholder: 'What happened?' },
-  { key: 'issue', label: 'Issue', placeholder: 'What legal question did the court resolve?' },
-  { key: 'rule', label: 'Rule', placeholder: 'What rule controlled the outcome?' },
-  { key: 'analysis', label: 'Analysis', placeholder: 'How did the court reason through the issue?' },
-  { key: 'conclusion', label: 'Conclusion', placeholder: 'What should you remember for class or exams?' },
-]
 
 const editorRefs = {}
 
@@ -30,10 +23,10 @@ defineExpose({ getSectionEditor })
 <template>
   <div class="brief-sections-form">
     <SectionEditor
-      v-for="section in sections"
+      v-for="section in props.templateSections"
       :key="section.key"
       :ref="(instance) => setEditorRef(section.key, instance)"
-      v-model="props.brief[section.key]"
+      v-model="props.brief.sections[section.key]"
       :label="section.label"
       :placeholder="section.placeholder"
     />

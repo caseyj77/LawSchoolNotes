@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import BriefSectionsForm from '@/components/BriefSectionsForm.vue'
@@ -9,32 +9,32 @@ const route = useRoute()
 const router = useRouter()
 const notesStore = useNotesStore()
 
-const existing = route.params.briefId
-  ? notesStore.getBriefById(route.params.briefId)
-  : null
+const isLoading = ref(true)
+const brief = reactive({})
+const templateSections = ref([])
 
-const brief = reactive(
-  existing ? { ...existing } : notesStore.createBlankBrief(route.params.classId),
-)
+onMounted(async () => {
+  const sections = await notesStore.getTemplateSections()
+  const existing = route.params.briefId
+    ? await notesStore.fetchBriefById(route.params.briefId)
+    : null
 
-const richSections = [
-  ['Facts', 'facts', 'Summarize the legally significant facts.'],
-  ['Issue', 'issue', 'Frame the question the court answered.'],
-  ['Rule', 'rule', 'State the governing rule or legal standard.'],
-  ['Analysis', 'analysis', 'Capture how the court applied the rule.'],
-  ['Conclusion', 'conclusion', 'Note the disposition or takeaway.'],
-]
+  Object.assign(brief, existing ?? (await notesStore.createBlankBrief(route.params.classId)))
+  templateSections.value = sections
+  isLoading.value = false
+})
 
 const studentNotesPreview = computed(() => brief.studentNotes || 'Add any notes for yourself.')
 
-function handleSave() {
-  notesStore.saveCaseBrief(brief)
-  router.push(`/class/${brief.classId}`)
+async function handleSave() {
+  const saved = await notesStore.saveCaseBrief(brief)
+  router.push(`/class/${saved.classId}`)
 }
 </script>
 
 <template>
-  <section class="brief-layout">
+  <p v-if="isLoading">Loading case brief…</p>
+  <section v-else class="brief-layout">
     <article class="panel">
       <p class="label">Case brief builder</p>
       <h2>Create a reusable brief.</h2>
@@ -63,7 +63,7 @@ function handleSave() {
           >
         </label>
 
-        <BriefSectionsForm :brief="brief" />
+        <BriefSectionsForm :brief="brief" :template-sections="templateSections" />
 
         <label>
           Student notes
@@ -84,10 +84,10 @@ function handleSave() {
       <p v-if="brief.citation" class="citation">{{ brief.citation }}</p>
 
       <dl>
-        <div v-for="[title, key, placeholder] in richSections" :key="key" class="preview-section">
-          <dt>{{ title }}</dt>
-          <dd v-if="brief[key]" v-html="brief[key]"></dd>
-          <dd v-else class="placeholder">{{ placeholder }}</dd>
+        <div v-for="section in templateSections" :key="section.key" class="preview-section">
+          <dt>{{ section.label }}</dt>
+          <dd v-if="brief.sections[section.key]" v-html="brief.sections[section.key]"></dd>
+          <dd v-else class="placeholder">{{ section.placeholder }}</dd>
         </div>
         <div class="preview-section">
           <dt>Student Notes</dt>
