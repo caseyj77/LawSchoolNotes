@@ -8,12 +8,10 @@ import DocxViewer from '@/components/DocxViewer.vue'
 import PdfViewer from '@/components/PdfViewer.vue'
 import SectionEditor from '@/components/SectionEditor.vue'
 import { appendExcerpt } from '@/lib/excerptHtml'
-import { useActiveBriefStore } from '@/stores/activeBriefStore'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
 const notesStore = useNotesStore()
-const activeBriefStore = useActiveBriefStore()
 
 const classId = computed(() => route.params.classId)
 const cls = computed(() => notesStore.getClassById(classId.value))
@@ -46,20 +44,20 @@ onMounted(async () => {
   templateSections.value = await notesStore.getTemplateSections()
   await notesStore.loadBriefsForClass(classId.value)
 
-  const lastActiveId = activeBriefStore.getActiveBriefForClass(classId.value)
+  const lastActiveId = notesStore.getActiveBriefForClass(classId.value)
   const stillExists = lastActiveId && notesStore.getBriefById(lastActiveId)
   activeBriefId.value = stillExists ? lastActiveId : briefs.value[0]?.id ?? null
   isLoading.value = false
 })
 
-function handleSelectChange(event) {
+async function handleSelectChange(event) {
   const value = event.target.value
   if (value === '__new__') {
     isCreatingBrief.value = true
     return
   }
   activeBriefId.value = value
-  activeBriefStore.setActiveBriefForClass(classId.value, value)
+  await notesStore.setActiveBriefForClass(classId.value, value)
 }
 
 async function handleCreateBrief() {

@@ -5,6 +5,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
 import { createSupabaseMock } from '@/lib/__tests__/supabaseTestUtils'
+import { useNotesStore } from '@/stores/notesStore'
 
 import App from '../App.vue'
 import { routes } from '../router'
@@ -34,9 +35,12 @@ async function mountApp(path) {
   router.push(path)
   await router.isReady()
 
+  const pinia = createPinia()
+  await useNotesStore(pinia).fetchClasses()
+
   const wrapper = mount(App, {
     global: {
-      plugins: [createPinia(), router],
+      plugins: [pinia, router],
     },
   })
 

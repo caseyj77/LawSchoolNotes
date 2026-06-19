@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 
 import { getCurrentUserId } from '@/lib/currentUser'
 import { supabase } from '@/lib/supabaseClient'
 import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
-import { useActiveBriefStore } from '@/stores/activeBriefStore'
 
-const CLASSES_STORAGE_KEY = 'law-school-classes'
+const OUTLINE_PERSIST_DEBOUNCE_MS = 600
+const outlineDebounceTimers = new Map()
 
 const seedClasses = [
   {
@@ -29,14 +29,13 @@ const seedClasses = [
   },
 ]
 
-function loadClasses() {
-  const stored = localStorage.getItem(CLASSES_STORAGE_KEY)
-  if (!stored) return seedClasses
-
-  try {
-    return JSON.parse(stored)
-  } catch {
-    return seedClasses
+function shapeClass(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    focus: row.focus,
+    outline: row.outline,
+    lastActiveBriefId: row.last_active_brief_id,
   }
 }
 
@@ -62,22 +61,53 @@ function shapeBrief(row, sectionRows, templateSections) {
 }
 
 export const useNotesStore = defineStore('notes', () => {
-  const classes = ref(loadClasses())
+  const classes = ref([])
   const caseBriefs = ref([])
   const templateSections = ref([])
   const isLoading = ref(false)
   const error = ref(null)
 
-  watch(
-    classes,
-    (value) => {
-      localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(value))
-    },
-    { deep: true },
-  )
+  async function fetchClasses() {
+    isLoading.value = true
+    error.value = null
+    try {
+      const userId = getCurrentUserId()
+      const { data, error: dbError } = await supabase
+        .from('classes')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at')
+      if (dbError) throw dbError
 
-  function addClass({ title, focus }) {
-    const created = { id: crypto.randomUUID(), title, focus, outline: '' }
+      if (data.length === 0) {
+        const { data: seeded, error: seedError } = await supabase
+          .from('classes')
+          .insert(seedClasses.map((cls) => ({ ...cls, user_id: userId })))
+          .select()
+        if (seedError) throw seedError
+        classes.value = seeded.map(shapeClass)
+      } else {
+        classes.value = data.map(shapeClass)
+      }
+      return classes.value
+    } catch (e) {
+      error.value = e
+      throw e
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function addClass({ title, focus }) {
+    const id = crypto.randomUUID()
+    const { data, error: insertError } = await supabase
+      .from('classes')
+      .insert({ id, user_id: getCurrentUserId(), title, focus: focus ?? '', outline: '' })
+      .select()
+      .single()
+    if (insertError) throw insertError
+
+    const created = shapeClass(data)
     classes.value.push(created)
     return created
   }
@@ -86,10 +116,56 @@ export const useNotesStore = defineStore('notes', () => {
     return classes.value.find((cls) => cls.id === id)
   }
 
+  // Optimistic local mutate, persisted to Supabase on a debounce since this is
+  // called on every keystroke via SectionEditor's Tiptap onUpdate.
   function updateOutline(classId, html) {
     const cls = getClassById(classId)
     if (!cls) return
     cls.outline = html
+    scheduleOutlinePersist(classId)
+  }
+
+  function scheduleOutlinePersist(classId) {
+    clearTimeout(outlineDebounceTimers.get(classId))
+    outlineDebounceTimers.set(
+      classId,
+      setTimeout(() => {
+        outlineDebounceTimers.delete(classId)
+        persistOutline(classId)
+      }, OUTLINE_PERSIST_DEBOUNCE_MS),
+    )
+  }
+
+  async function persistOutline(classId) {
+    const cls = getClassById(classId)
+    if (!cls) return
+    const { error: dbError } = await supabase
+      .from('classes')
+      .update({ outline: cls.outline })
+      .eq('id', classId)
+      .eq('user_id', getCurrentUserId())
+    if (dbError) {
+      error.value = dbError
+      throw dbError
+    }
+  }
+
+  function getActiveBriefForClass(classId) {
+    return getClassById(classId)?.lastActiveBriefId ?? null
+  }
+
+  async function setActiveBriefForClass(classId, briefId) {
+    const cls = getClassById(classId)
+    if (cls) cls.lastActiveBriefId = briefId
+    const { error: dbError } = await supabase
+      .from('classes')
+      .update({ last_active_brief_id: briefId })
+      .eq('id', classId)
+      .eq('user_id', getCurrentUserId())
+    if (dbError) {
+      error.value = dbError
+      throw dbError
+    }
   }
 
   async function getTemplateSections(templateId = DEFAULT_TEMPLATE_ID) {
@@ -244,7 +320,7 @@ export const useNotesStore = defineStore('notes', () => {
 
     const saved = { ...brief, id: briefId }
     caseBriefs.value = [...caseBriefs.value.filter((b) => b.id !== briefId), saved]
-    useActiveBriefStore().setActiveBriefForClass(saved.classId, briefId)
+    await setActiveBriefForClass(saved.classId, briefId)
     return saved
   }
 
@@ -259,9 +335,9 @@ export const useNotesStore = defineStore('notes', () => {
     caseBriefs.value = caseBriefs.value.filter((brief) => brief.classId !== id)
 
     const { error: deleteError } = await supabase
-      .from('case_briefs')
+      .from('classes')
       .delete()
-      .eq('class_id', id)
+      .eq('id', id)
       .eq('user_id', getCurrentUserId())
     if (deleteError) throw deleteError
   }
@@ -272,9 +348,13 @@ export const useNotesStore = defineStore('notes', () => {
     templateSections,
     isLoading,
     error,
+    fetchClasses,
     addClass,
     getClassById,
     updateOutline,
+    persistOutline,
+    getActiveBriefForClass,
+    setActiveBriefForClass,
     deleteClass,
     getTemplateSections,
     getBriefsForClass,

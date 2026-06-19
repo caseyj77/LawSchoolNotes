@@ -8,10 +8,10 @@ const notesStore = useNotesStore()
 const newTitle = ref('')
 const newFocus = ref('')
 
-function handleAddClass() {
+async function handleAddClass() {
   const title = newTitle.value.trim()
   if (!title) return
-  notesStore.addClass({ title, focus: newFocus.value.trim() })
+  await notesStore.addClass({ title, focus: newFocus.value.trim() })
   newTitle.value = ''
   newFocus.value = ''
 }
