@@ -75,6 +75,11 @@ export const useNotesStore = defineStore('notes', () => {
     return classes.value.find((cls) => cls.id === id)
   }
 
+  function deleteClass(id) {
+    classes.value = classes.value.filter((cls) => cls.id !== id)
+    caseBriefs.value = caseBriefs.value.filter((brief) => brief.classId !== id)
+  }
+
   function getBriefsForClass(classId) {
     return caseBriefs.value.filter((brief) => brief.classId === classId)
   }
@@ -113,6 +118,7 @@ export const useNotesStore = defineStore('notes', () => {
     caseBriefs,
     addClass,
     getClassById,
+    deleteClass,
     getBriefsForClass,
     getBriefById,
     saveCaseBrief,

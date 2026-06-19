@@ -1,5 +1,5 @@
 import { createPinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { flushPromises, mount } from '@vue/test-utils'
 
@@ -76,5 +76,23 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('No outline yet')
     expect(wrapper.text()).toContain('Hadley v. Baxendale')
     expect(wrapper.text()).toContain('9 Ex. 341 (1854)')
+  })
+
+  it('deletes a class and its case briefs after confirmation', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    const wrapper = await mountApp('/class/contracts/case-briefs/new')
+    await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Hadley v. Baxendale')
+
+    await wrapper.get('.danger').trigger('click')
+    await flushPromises()
+
+    expect(window.confirm).toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Course outlines')
+    expect(wrapper.text()).not.toContain('Hadley v. Baxendale')
   })
 })
