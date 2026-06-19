@@ -5,7 +5,7 @@ defineProps({
   position: { type: Object, required: true },
 })
 
-const emit = defineEmits(['select-section', 'close'])
+const emit = defineEmits(['select-section', 'select-outline', 'close'])
 
 const sections = [
   { key: 'facts', label: 'Facts' },
@@ -36,7 +36,7 @@ const briefExpanded = ref(false)
       </li>
     </ul>
 
-    <button type="button" class="menu-item" disabled title="Coming soon">Add to Outline</button>
+    <button type="button" class="menu-item" @click="emit('select-outline')">Add to Outline</button>
 
     <button type="button" class="menu-item close" @click="emit('close')">Cancel</button>
   </div>

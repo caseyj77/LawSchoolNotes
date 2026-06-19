@@ -2,12 +2,18 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
+import SectionEditor from '@/components/SectionEditor.vue'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
 const notesStore = useNotesStore()
 
 const cls = computed(() => notesStore.getClassById(route.params.classId))
+
+const outlineHtml = computed({
+  get: () => cls.value?.outline ?? '',
+  set: (value) => notesStore.updateOutline(route.params.classId, value),
+})
 </script>
 
 <template>
@@ -16,9 +22,16 @@ const cls = computed(() => notesStore.getClassById(route.params.classId))
       <p class="label">Outline builder</p>
       <h2>{{ cls.title }}</h2>
       <p class="supporting-copy">
-        Outline editing isn't available yet — check back soon.
+        Build your outline here, or capture excerpts into it from the document reader.
       </p>
-      <RouterLink :to="`/class/${cls.id}`">Back to class</RouterLink>
+
+      <SectionEditor
+        v-model="outlineHtml"
+        label="Outline"
+        placeholder="Start building your outline…"
+      />
+
+      <RouterLink :to="`/class/${cls.id}`" class="back-link">← Back to class</RouterLink>
     </article>
   </section>
 </template>
@@ -59,5 +72,13 @@ h2 {
   max-width: 42rem;
   margin: 1rem 0;
   line-height: 1.65;
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: #1f2937;
+  font-weight: 600;
+  text-decoration: none;
 }
 </style>

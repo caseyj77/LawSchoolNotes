@@ -10,16 +10,19 @@ const seedClasses = [
     id: 'contracts',
     title: 'Contracts',
     focus: 'Formation, consideration, performance, and remedies.',
+    outline: '',
   },
   {
     id: 'torts',
     title: 'Torts',
     focus: 'Intentional torts, negligence, strict liability, and defenses.',
+    outline: '',
   },
   {
     id: 'civil-procedure',
     title: 'Civil Procedure',
     focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
+    outline: '',
   },
 ]
 
@@ -68,13 +71,19 @@ export const useNotesStore = defineStore('notes', () => {
   )
 
   function addClass({ title, focus }) {
-    const created = { id: crypto.randomUUID(), title, focus }
+    const created = { id: crypto.randomUUID(), title, focus, outline: '' }
     classes.value.push(created)
     return created
   }
 
   function getClassById(id) {
     return classes.value.find((cls) => cls.id === id)
+  }
+
+  function updateOutline(classId, html) {
+    const cls = getClassById(classId)
+    if (!cls) return
+    cls.outline = html
   }
 
   function deleteClass(id) {
@@ -128,6 +137,7 @@ export const useNotesStore = defineStore('notes', () => {
     caseBriefs,
     addClass,
     getClassById,
+    updateOutline,
     deleteClass,
     getBriefsForClass,
     getBriefById,

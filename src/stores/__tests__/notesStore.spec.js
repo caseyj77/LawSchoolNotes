@@ -45,4 +45,30 @@ describe('useNotesStore', () => {
     expect(store.getBriefById(brief.id).caseName).toBe('Palsgraf v. Long Island Railroad Co.')
     expect(activeBriefStore.getActiveBriefForClass('contracts')).toBe(brief.id)
   })
+
+  it('seed classes start with an empty outline', () => {
+    const store = useNotesStore()
+    expect(store.getClassById('contracts').outline).toBe('')
+  })
+
+  it('updateOutline sets the outline HTML for an existing class', () => {
+    const store = useNotesStore()
+    store.updateOutline('contracts', '<p>Formation requires offer, acceptance, consideration.</p>')
+
+    expect(store.getClassById('contracts').outline).toBe(
+      '<p>Formation requires offer, acceptance, consideration.</p>',
+    )
+  })
+
+  it('updateOutline does nothing for an unknown class id', () => {
+    const store = useNotesStore()
+    expect(() => store.updateOutline('does-not-exist', '<p>x</p>')).not.toThrow()
+  })
+
+  it('a new class created via addClass starts with an empty outline', () => {
+    const store = useNotesStore()
+    const created = store.addClass({ title: 'Evidence', focus: 'Relevance and hearsay.' })
+
+    expect(created.outline).toBe('')
+  })
 })

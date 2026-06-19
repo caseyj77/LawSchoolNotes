@@ -6,6 +6,7 @@ import BriefSectionsForm from '@/components/BriefSectionsForm.vue'
 import CaptureMenu from '@/components/CaptureMenu.vue'
 import DocxViewer from '@/components/DocxViewer.vue'
 import PdfViewer from '@/components/PdfViewer.vue'
+import SectionEditor from '@/components/SectionEditor.vue'
 import { appendExcerpt } from '@/lib/excerptHtml'
 import { useActiveBriefStore } from '@/stores/activeBriefStore'
 import { useNotesStore } from '@/stores/notesStore'
@@ -18,6 +19,11 @@ const classId = computed(() => route.params.classId)
 const cls = computed(() => notesStore.getClassById(classId.value))
 const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
 
+const outlineHtml = computed({
+  get: () => cls.value?.outline ?? '',
+  set: (value) => notesStore.updateOutline(classId.value, value),
+})
+
 const activeBriefId = ref(null)
 const activeBrief = computed(() =>
   activeBriefId.value ? notesStore.getBriefById(activeBriefId.value) : null,
@@ -25,6 +31,7 @@ const activeBrief = computed(() =>
 
 const documentType = ref('pdf')
 const briefSectionsFormRef = ref(null)
+const outlineEditorRef = ref(null)
 
 const isCreatingBrief = ref(false)
 const newBriefName = ref('')
@@ -60,10 +67,6 @@ function handleCreateBrief() {
 }
 
 function handleCapture({ text, source, position }) {
-  if (!activeBriefId.value) {
-    captureMissingBriefMessage.value = 'Select or create a case brief first.'
-    return
-  }
   captureMissingBriefMessage.value = ''
   pendingCapture.value = { text, source }
   menuPosition.value = position
@@ -75,7 +78,20 @@ function closeMenu() {
 }
 
 function handleSelectSection(sectionKey) {
+  if (!activeBriefId.value) {
+    captureMissingBriefMessage.value = 'Select or create a case brief first.'
+    closeMenu()
+    return
+  }
   const editor = briefSectionsFormRef.value?.getSectionEditor(sectionKey)
+  if (editor && pendingCapture.value) {
+    appendExcerpt(editor, pendingCapture.value.text, pendingCapture.value.source)
+  }
+  closeMenu()
+}
+
+function handleSelectOutline() {
+  const editor = outlineEditorRef.value?.editor
   if (editor && pendingCapture.value) {
     appendExcerpt(editor, pendingCapture.value.text, pendingCapture.value.source)
   }
@@ -114,33 +130,46 @@ function handleSelectSection(sectionKey) {
         <DocxViewer v-else @capture="handleCapture" />
       </article>
 
-      <article class="panel brief-pane">
-        <p class="label">Active case brief</p>
+      <div class="right-column">
+        <article class="panel outline-pane">
+          <p class="label">Outline</p>
+          <SectionEditor
+            ref="outlineEditorRef"
+            v-model="outlineHtml"
+            label="Outline"
+            placeholder="Capture outline notes here…"
+          />
+        </article>
 
-        <select :value="activeBriefId" class="brief-select" @change="handleSelectChange">
-          <option :value="null" disabled>Select a brief</option>
-          <option v-for="brief in briefs" :key="brief.id" :value="brief.id">
-            {{ brief.caseName || 'Untitled case brief' }}
-          </option>
-          <option value="__new__">+ New Case Brief</option>
-        </select>
+        <article class="panel brief-pane">
+          <p class="label">Active case brief</p>
 
-        <form v-if="isCreatingBrief" class="new-brief-form" @submit.prevent="handleCreateBrief">
-          <input v-model.trim="newBriefName" type="text" placeholder="Case name" required>
-          <button type="submit">Create</button>
-        </form>
+          <select :value="activeBriefId" class="brief-select" @change="handleSelectChange">
+            <option :value="null" disabled>Select a brief</option>
+            <option v-for="brief in briefs" :key="brief.id" :value="brief.id">
+              {{ brief.caseName || 'Untitled case brief' }}
+            </option>
+            <option value="__new__">+ New Case Brief</option>
+          </select>
 
-        <p v-if="captureMissingBriefMessage" class="warning">{{ captureMissingBriefMessage }}</p>
+          <form v-if="isCreatingBrief" class="new-brief-form" @submit.prevent="handleCreateBrief">
+            <input v-model.trim="newBriefName" type="text" placeholder="Case name" required>
+            <button type="submit">Create</button>
+          </form>
 
-        <BriefSectionsForm v-if="activeBrief" ref="briefSectionsFormRef" :brief="activeBrief" />
-        <p v-else class="supporting-copy">No brief selected for this class yet.</p>
-      </article>
+          <p v-if="captureMissingBriefMessage" class="warning">{{ captureMissingBriefMessage }}</p>
+
+          <BriefSectionsForm v-if="activeBrief" ref="briefSectionsFormRef" :brief="activeBrief" />
+          <p v-else class="supporting-copy">No brief selected for this class yet.</p>
+        </article>
+      </div>
     </div>
 
     <CaptureMenu
       v-if="pendingCapture"
       :position="menuPosition"
       @select-section="handleSelectSection"
+      @select-outline="handleSelectOutline"
       @close="closeMenu"
     />
   </section>
@@ -223,6 +252,12 @@ h2 {
   background: #1f2937;
   border-color: #1f2937;
   color: #fff;
+}
+
+.right-column {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
 }
 
 .brief-pane {

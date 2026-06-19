@@ -39,7 +39,8 @@ function handleDeleteClass() {
 
     <article class="panel">
       <p class="label">Outline</p>
-      <p class="supporting-copy">No outline yet.</p>
+      <p v-if="cls.outline" class="supporting-copy outline-preview" v-html="cls.outline"></p>
+      <p v-else class="supporting-copy">No outline yet.</p>
       <RouterLink :to="`/class/${classId}/outline`">Open outline builder</RouterLink>
     </article>
 
@@ -133,6 +134,15 @@ h2 {
 
 .citation {
   color: #6b7280;
+}
+
+.outline-preview {
+  max-height: 4.8rem;
+  overflow: hidden;
+}
+
+.outline-preview :deep(p) {
+  margin: 0 0 0.5rem;
 }
 
 .danger {
