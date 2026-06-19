@@ -1,14 +1,20 @@
 <script setup>
 import { computed, reactive } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
-const brief = reactive({
-  caseName: '',
-  facts: '',
-  issue: '',
-  rule: '',
-  analysis: '',
-  conclusion: '',
-})
+import { useNotesStore } from '@/stores/notesStore'
+
+const route = useRoute()
+const router = useRouter()
+const notesStore = useNotesStore()
+
+const existing = route.params.briefId
+  ? notesStore.getBriefById(route.params.briefId)
+  : null
+
+const brief = reactive(
+  existing ? { ...existing } : notesStore.createBlankBrief(route.params.classId),
+)
 
 const sections = computed(() => [
   ['Facts', brief.facts || 'Summarize the legally significant facts.'],
@@ -16,7 +22,13 @@ const sections = computed(() => [
   ['Rule', brief.rule || 'State the governing rule or legal standard.'],
   ['Analysis', brief.analysis || 'Capture how the court applied the rule.'],
   ['Conclusion', brief.conclusion || 'Note the disposition or takeaway.'],
+  ['Student Notes', brief.studentNotes || 'Add any notes for yourself.'],
 ])
+
+function handleSave() {
+  notesStore.saveCaseBrief(brief)
+  router.push(`/class/${brief.classId}`)
+}
 </script>
 
 <template>
@@ -36,6 +48,16 @@ const sections = computed(() => [
             v-model.trim="brief.caseName"
             type="text"
             placeholder="Palsgraf v. Long Island Railroad Co."
+          >
+        </label>
+
+        <label>
+          Citation
+          <input
+            id="citation"
+            v-model.trim="brief.citation"
+            type="text"
+            placeholder="248 N.Y. 339 (1928)"
           >
         </label>
 
@@ -79,12 +101,24 @@ const sections = computed(() => [
             placeholder="What should you remember for class or exams?"
           ></textarea>
         </label>
+
+        <label>
+          Student notes
+          <textarea
+            v-model.trim="brief.studentNotes"
+            rows="3"
+            placeholder="Anything else worth remembering?"
+          ></textarea>
+        </label>
       </form>
+
+      <button type="button" class="save-button" @click="handleSave">Save brief</button>
     </article>
 
     <article class="panel preview">
       <p class="label">Brief preview</p>
       <h2>{{ brief.caseName || 'Untitled case brief' }}</h2>
+      <p v-if="brief.citation" class="citation">{{ brief.citation }}</p>
 
       <dl>
         <div v-for="[title, content] in sections" :key="title" class="preview-section">
@@ -153,6 +187,24 @@ textarea {
 
 textarea {
   resize: vertical;
+}
+
+.save-button {
+  width: fit-content;
+  margin-top: 1rem;
+  padding: 0.85rem 1.5rem;
+  border: none;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preview .citation {
+  margin-bottom: 1rem;
+  color: #6b7280;
 }
 
 .preview dl {

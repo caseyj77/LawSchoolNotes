@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { createPinia } from 'pinia'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { flushPromises, mount } from '@vue/test-utils'
 
@@ -16,7 +17,7 @@ async function mountApp(path) {
 
   const wrapper = mount(App, {
     global: {
-      plugins: [router],
+      plugins: [createPinia(), router],
     },
   })
 
@@ -25,6 +26,10 @@ async function mountApp(path) {
 }
 
 describe('LawSchoolNotes app', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('shows the course outlines view on the home route', async () => {
     const wrapper = await mountApp('/')
 
@@ -33,13 +38,31 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('Civil Procedure')
   })
 
-  it('shows the case brief builder and live preview on the case briefs route', async () => {
-    const wrapper = await mountApp('/case-briefs')
+  it('creates a case brief with a citation and student notes from the class view', async () => {
+    const wrapper = await mountApp('/class/contracts')
+
+    expect(wrapper.text()).toContain('Contracts')
+    expect(wrapper.text()).toContain('No outline yet')
+    expect(wrapper.text()).toContain('No case briefs yet')
+
+    await wrapper.get('a[href="/class/contracts/case-briefs/new"]').trigger('click')
+    await flushPromises()
 
     expect(wrapper.text()).toContain('Case brief builder')
-    await wrapper.get('#case-name').setValue('Palsgraf v. Long Island Railroad Co.')
+    await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
+    await wrapper.get('#citation').setValue('9 Ex. 341 (1854)')
+    await wrapper.find('textarea[placeholder="Anything else worth remembering?"]').setValue(
+      'Foreseeability limits consequential damages.',
+    )
 
-    expect(wrapper.text()).toContain('Palsgraf v. Long Island Railroad Co.')
-    expect(wrapper.text()).toContain('Brief preview')
+    expect(wrapper.text()).toContain('Hadley v. Baxendale')
+    expect(wrapper.text()).toContain('9 Ex. 341 (1854)')
+
+    await wrapper.get('button').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('No outline yet')
+    expect(wrapper.text()).toContain('Hadley v. Baxendale')
+    expect(wrapper.text()).toContain('9 Ex. 341 (1854)')
   })
 })
