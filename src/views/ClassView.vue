@@ -44,6 +44,12 @@ function handleDeleteClass() {
     </article>
 
     <article class="panel">
+      <p class="label">Document reader</p>
+      <p class="supporting-copy">Read a case and build your brief side by side.</p>
+      <RouterLink :to="`/class/${classId}/reader`">Open document reader</RouterLink>
+    </article>
+
+    <article class="panel">
       <p class="label">Case briefs</p>
       <ul v-if="briefs.length" class="brief-list">
         <li v-for="brief in briefs" :key="brief.id">

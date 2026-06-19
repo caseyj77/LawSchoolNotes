@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 
+import { useActiveBriefStore } from '@/stores/activeBriefStore'
+
 const STORAGE_KEY = 'law-school-notes'
 
 const seedClasses = [
@@ -92,11 +94,12 @@ export const useNotesStore = defineStore('notes', () => {
     if (!brief.id) {
       brief.id = crypto.randomUUID()
       caseBriefs.value.push(brief)
-      return
+    } else {
+      const existing = getBriefById(brief.id)
+      Object.assign(existing, brief)
     }
 
-    const existing = getBriefById(brief.id)
-    Object.assign(existing, brief)
+    useActiveBriefStore().setActiveBriefForClass(brief.classId, brief.id)
   }
 
   function createBlankBrief(classId) {
@@ -113,6 +116,13 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
+  function createAndSaveBrief({ classId, caseName }) {
+    const brief = { ...createBlankBrief(classId), caseName, id: crypto.randomUUID() }
+    caseBriefs.value.push(brief)
+    useActiveBriefStore().setActiveBriefForClass(classId, brief.id)
+    return brief
+  }
+
   return {
     classes,
     caseBriefs,
@@ -123,5 +133,6 @@ export const useNotesStore = defineStore('notes', () => {
     getBriefById,
     saveCaseBrief,
     createBlankBrief,
+    createAndSaveBrief,
   }
 })
