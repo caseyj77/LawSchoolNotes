@@ -94,7 +94,7 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('Hadley v. Baxendale')
     expect(wrapper.text()).toContain('9 Ex. 341 (1854)')
 
-    await wrapper.get('button').trigger('click')
+    await wrapper.get('.save-button').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('No outline yet')
@@ -107,7 +107,7 @@ describe('LawSchoolNotes app', () => {
 
     const wrapper = await mountApp('/class/contracts/case-briefs/new')
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
-    await wrapper.get('button').trigger('click')
+    await wrapper.get('.save-button').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('Hadley v. Baxendale')
