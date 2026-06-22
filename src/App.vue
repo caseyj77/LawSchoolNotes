@@ -27,8 +27,8 @@ import { RouterLink, RouterView } from 'vue-router'
   margin: 0;
   font-family:
     Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #f5f1eb;
-  color: #1f2937;
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 :global(*) {
@@ -56,7 +56,7 @@ import { RouterLink, RouterView } from 'vue-router'
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h1 {
@@ -82,10 +82,10 @@ h1 {
 
 .nav a {
   padding: 0.8rem 1.15rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border);
   border-radius: 999px;
   text-decoration: none;
-  background: #fff;
+  background: var(--color-surface);
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease,
@@ -93,8 +93,8 @@ h1 {
 }
 
 .nav a.router-link-active {
-  background: #1f2937;
-  border-color: #1f2937;
-  color: #fff;
+  background: var(--color-active-bg);
+  border-color: var(--color-active-border);
+  color: var(--color-active-text);
 }
 </style>

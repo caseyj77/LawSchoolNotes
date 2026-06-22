@@ -42,10 +42,10 @@ const briefExpanded = ref(false)
   display: grid;
   min-width: 12rem;
   padding: 0.4rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 0.9rem;
-  background: #fff;
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+  background: var(--color-surface);
+  box-shadow: 0 18px 45px var(--shadow-color-dark);
 }
 
 .menu-item {
@@ -59,16 +59,16 @@ const briefExpanded = ref(false)
 }
 
 .menu-item:hover:not(:disabled) {
-  background: #f8fafc;
+  background: var(--color-bg-alt);
 }
 
 .menu-item:disabled {
-  color: #a8a29e;
+  color: var(--color-disabled);
   cursor: not-allowed;
 }
 
 .menu-item.close {
-  color: #b91c1c;
+  color: var(--color-error);
 }
 
 .submenu {
@@ -76,7 +76,7 @@ const briefExpanded = ref(false)
   padding: 0;
   margin: 0 0 0 0.75rem;
   list-style: none;
-  border-left: 2px solid #e7e5e4;
+  border-left: 2px solid var(--color-border);
 }
 
 .submenu button {
@@ -91,6 +91,6 @@ const briefExpanded = ref(false)
 }
 
 .submenu button:hover {
-  background: #f8fafc;
+  background: var(--color-bg-alt);
 }
 </style>

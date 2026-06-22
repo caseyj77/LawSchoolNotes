@@ -81,10 +81,10 @@ async function handleDeleteClass() {
 
 .panel {
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  background: var(--color-panel-bg);
+  box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
 .panel-wide {
@@ -103,7 +103,7 @@ async function handleDeleteClass() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h2,
@@ -135,12 +135,12 @@ h2 {
   gap: 1rem;
   padding: 0.85rem 1rem;
   border-radius: 0.9rem;
-  background: #f8fafc;
+  background: var(--color-bg-alt);
   text-decoration: none;
 }
 
 .citation {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .outline-preview {
@@ -155,10 +155,10 @@ h2 {
 .danger {
   justify-self: start;
   padding: 0.6rem 1rem;
-  border: 1px solid #b91c1c;
+  border: 1px solid var(--color-error);
   border-radius: 0.9rem;
-  background: #fff;
-  color: #b91c1c;
+  background: var(--color-surface);
+  color: var(--color-error);
   cursor: pointer;
   font: inherit;
 }

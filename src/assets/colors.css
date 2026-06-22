@@ -1,0 +1,31 @@
+:root {
+  /* Palette */
+  --space-indigo: #1f2041;
+  --vintage-grape: #4b3f72;
+  --jungle-teal: #417b5a;
+  --bone: #d0ceba;
+  --powder-petal: #e9d2c0;
+
+  /* Semantic */
+  --color-bg: #faf3ed;
+  --color-bg-alt: #f1ece2;
+  --color-surface: #fff;
+  --color-surface-alt: #fffdfb;
+  --color-text: var(--space-indigo);
+  --color-text-secondary: #5b577e;
+  --color-accent: var(--vintage-grape);
+  --color-success: var(--jungle-teal);
+  --color-border: var(--bone);
+  --color-border-strong: #b9b69c;
+  --color-active-bg: var(--space-indigo);
+  --color-active-border: var(--space-indigo);
+  --color-active-text: #fff;
+  --color-disabled: #9d9a86;
+  --color-error: #b91c1c;
+  --color-error-bg: #fef2f2;
+  --color-success-bg: #eaf3ec;
+  --color-panel-bg: rgba(255, 255, 255, 0.92);
+  --shadow-color-light: rgba(31, 32, 65, 0.06);
+  --shadow-color: rgba(31, 32, 65, 0.08);
+  --shadow-color-dark: rgba(31, 32, 65, 0.16);
+}

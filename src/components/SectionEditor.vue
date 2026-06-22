@@ -48,9 +48,9 @@ defineExpose({ editor })
 }
 
 .editor-shell {
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.9rem;
-  background: #fffdfb;
+  background: var(--color-surface-alt);
   padding: 0.6rem 0.85rem;
 }
 
@@ -72,7 +72,7 @@ defineExpose({ editor })
 .editor-shell :deep(.tiptap blockquote) {
   margin: 0.5rem 0;
   padding-left: 0.85rem;
-  border-left: 3px solid #e7e5e4;
-  color: #57534e;
+  border-left: 3px solid var(--color-border);
+  color: var(--vintage-grape);
 }
 </style>

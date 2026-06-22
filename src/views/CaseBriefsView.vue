@@ -107,10 +107,10 @@ async function handleSave() {
 
 .panel {
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  background: var(--color-panel-bg);
+  box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
 .label {
@@ -119,7 +119,7 @@ async function handleSave() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h2,
@@ -147,10 +147,10 @@ input,
 textarea {
   width: 100%;
   padding: 0.85rem 0.95rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.9rem;
   font: inherit;
-  background: #fffdfb;
+  background: var(--color-surface-alt);
 }
 
 textarea {
@@ -163,8 +163,8 @@ textarea {
   padding: 0.85rem 1.5rem;
   border: none;
   border-radius: 999px;
-  background: #1f2937;
-  color: #fff;
+  background: var(--color-active-bg);
+  color: var(--color-active-text);
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -172,7 +172,7 @@ textarea {
 
 .preview .citation {
   margin-bottom: 1rem;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .preview dl {
@@ -184,7 +184,7 @@ textarea {
 .preview-section {
   padding: 1rem;
   border-radius: 1rem;
-  background: #f8fafc;
+  background: var(--color-bg-alt);
 }
 
 dt {
@@ -199,7 +199,7 @@ dd {
 }
 
 dd.placeholder {
-  color: #a8a29e;
+  color: var(--color-disabled);
   white-space: normal;
 }
 
@@ -214,7 +214,7 @@ dd :deep(p:last-child) {
 dd :deep(blockquote) {
   margin: 0.5rem 0;
   padding-left: 0.85rem;
-  border-left: 3px solid #e7e5e4;
-  color: #57534e;
+  border-left: 3px solid var(--color-border);
+  color: var(--vintage-grape);
 }
 </style>

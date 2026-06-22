@@ -43,10 +43,10 @@ const outlineHtml = computed({
 
 .panel {
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  background: var(--color-panel-bg);
+  box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
 .label {
@@ -55,7 +55,7 @@ const outlineHtml = computed({
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h2,
@@ -77,7 +77,7 @@ h2 {
 .back-link {
   display: inline-block;
   margin-top: 1rem;
-  color: #1f2937;
+  color: var(--color-text);
   font-weight: 600;
   text-decoration: none;
 }

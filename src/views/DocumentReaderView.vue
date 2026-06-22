@@ -213,7 +213,7 @@ function handleSelectOutline() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h2 {
@@ -222,7 +222,7 @@ h2 {
 }
 
 .back-link {
-  color: #1f2937;
+  color: var(--color-text);
   font-weight: 600;
   text-decoration: none;
 }
@@ -241,10 +241,10 @@ h2 {
 
 .panel {
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  background: var(--color-panel-bg);
+  box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
 .document-toggle {
@@ -255,17 +255,17 @@ h2 {
 
 .document-toggle button {
   padding: 0.5rem 0.9rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
   font: inherit;
 }
 
 .document-toggle button.active {
-  background: #1f2937;
-  border-color: #1f2937;
-  color: #fff;
+  background: var(--color-active-bg);
+  border-color: var(--color-active-border);
+  color: var(--color-active-text);
 }
 
 .right-column {
@@ -283,10 +283,10 @@ h2 {
 .brief-select {
   width: 100%;
   padding: 0.7rem 0.9rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.9rem;
   font: inherit;
-  background: #fffdfb;
+  background: var(--color-surface-alt);
 }
 
 .new-brief-form {
@@ -297,17 +297,17 @@ h2 {
 .new-brief-form input {
   flex: 1;
   padding: 0.6rem 0.8rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.7rem;
   font: inherit;
 }
 
 .new-brief-form button {
   padding: 0.6rem 1rem;
-  border: 1px solid #1f2937;
+  border: 1px solid var(--color-active-border);
   border-radius: 0.7rem;
-  background: #1f2937;
-  color: #fff;
+  background: var(--color-active-bg);
+  color: var(--color-active-text);
   cursor: pointer;
   font: inherit;
 }
@@ -316,11 +316,11 @@ h2 {
   margin: 0;
   padding: 0.6rem 0.85rem;
   border-radius: 0.7rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .supporting-copy {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 </style>

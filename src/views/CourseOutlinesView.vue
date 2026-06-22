@@ -62,10 +62,10 @@ async function handleAddClass() {
 
 .panel {
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  background: var(--color-panel-bg);
+  box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
 .panel-wide {
@@ -84,7 +84,7 @@ async function handleAddClass() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h2,
@@ -115,13 +115,13 @@ h2 {
   display: block;
   padding: 1.25rem;
   border-radius: 1rem;
-  background: #f8fafc;
+  background: var(--color-bg-alt);
   text-decoration: none;
   transition: box-shadow 0.2s ease;
 }
 
 .outline-card:hover {
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 25px var(--shadow-color);
 }
 
 .outline-card p {
@@ -129,7 +129,7 @@ h2 {
 }
 
 .new-class-form {
-  border-top: 1px solid #e7e5e4;
+  border-top: 1px solid var(--color-border);
   padding-top: 1.25rem;
 }
 
@@ -143,18 +143,18 @@ h2 {
   flex: 1;
   min-width: 10rem;
   padding: 0.7rem 0.9rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.9rem;
   font: inherit;
-  background: #fffdfb;
+  background: var(--color-surface-alt);
 }
 
 .new-class-fields button {
   padding: 0.7rem 1.2rem;
-  border: 1px solid #1f2937;
+  border: 1px solid var(--color-active-border);
   border-radius: 0.9rem;
-  background: #1f2937;
-  color: #fff;
+  background: var(--color-active-bg);
+  color: var(--color-active-text);
   font: inherit;
   cursor: pointer;
 }

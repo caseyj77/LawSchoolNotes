@@ -72,10 +72,10 @@ async function handleSubmit() {
 
 .panel {
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1.5rem;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  background: var(--color-panel-bg);
+  box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
 .panel-narrow {
@@ -90,7 +90,7 @@ async function handleSubmit() {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #92400e;
+  color: var(--color-accent);
 }
 
 h2 {
@@ -111,18 +111,18 @@ h2 {
 
 .auth-form input {
   padding: 0.7rem 0.9rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.9rem;
   font: inherit;
-  background: #fffdfb;
+  background: var(--color-surface-alt);
 }
 
 .auth-form button {
   padding: 0.7rem 1.2rem;
-  border: 1px solid #1f2937;
+  border: 1px solid var(--color-active-border);
   border-radius: 0.9rem;
-  background: #1f2937;
-  color: #fff;
+  background: var(--color-active-bg);
+  color: var(--color-active-text);
   font: inherit;
   cursor: pointer;
 }
@@ -136,16 +136,16 @@ h2 {
   margin: 0;
   padding: 0.6rem 0.85rem;
   border-radius: 0.7rem;
-  background: #fef2f2;
-  color: #b91c1c;
+  background: var(--color-error-bg);
+  color: var(--color-error);
 }
 
 .success {
   margin: 0;
   padding: 0.6rem 0.85rem;
   border-radius: 0.7rem;
-  background: #ecfdf5;
-  color: #047857;
+  background: var(--color-success-bg);
+  color: var(--jungle-teal);
 }
 
 .supporting-copy {

@@ -138,9 +138,9 @@ onBeforeUnmount(() => {
 
 .pager button {
   padding: 0.5rem 0.9rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.7rem;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
   font: inherit;
 }
@@ -153,9 +153,9 @@ onBeforeUnmount(() => {
 .canvas-shell {
   overflow: auto;
   max-height: 70vh;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1rem;
-  background: #fff;
+  background: var(--color-surface);
   user-select: text;
 }
 
@@ -169,10 +169,10 @@ onBeforeUnmount(() => {
 
 .status,
 .error {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .error {
-  color: #b91c1c;
+  color: var(--color-error);
 }
 </style>

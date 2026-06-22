@@ -69,18 +69,18 @@ function handleContextMenu(event) {
   overflow: auto;
   max-height: 70vh;
   padding: 1.5rem;
-  border: 1px solid #e7e5e4;
+  border: 1px solid var(--color-border);
   border-radius: 1rem;
-  background: #fff;
+  background: var(--color-surface);
   line-height: 1.6;
 }
 
 .status,
 .error {
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .error {
-  color: #b91c1c;
+  color: var(--color-error);
 }
 </style>

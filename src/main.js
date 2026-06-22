@@ -1,6 +1,7 @@
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
+import './assets/colors.css'
 import { migrateLocalBriefsToSupabase } from './lib/migrateLocalBriefs'
 import { migrateLocalClassesToSupabase } from './lib/migrateLocalClasses'
 import { useNotesStore } from './stores/notesStore'
