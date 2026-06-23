@@ -1,18 +1,12 @@
 <script setup>
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { RouterView } from 'vue-router'
 
-import { useAuthStore } from '@/stores/auth'
-
-const authStore = useAuthStore()
-const router = useRouter()
-
-async function handleLogOut() {
-  await authStore.signOut()
-  router.push({ name: 'login' })
-}
+import AppHeader from '@/components/AppHeader.vue'
 </script>
 
 <template>
+  <AppHeader />
+
   <main class="app-shell">
     <section class="hero">
       <p class="eyebrow">Law School Notes</p>
@@ -21,16 +15,6 @@ async function handleLogOut() {
         Use the workspace to keep class outlines visible and draft briefs with the standard case
         sections you need for school.
       </p>
-      <nav class="nav">
-        <template v-if="authStore.session">
-          <RouterLink :to="{ name: 'course-outlines' }">Classes</RouterLink>
-          <button type="button" class="nav-button" @click="handleLogOut">Log out</button>
-        </template>
-        <template v-else>
-          <RouterLink :to="{ name: 'login' }">Log in</RouterLink>
-          <RouterLink :to="{ name: 'signup' }">Create account</RouterLink>
-        </template>
-      </nav>
     </section>
 
     <RouterView />
@@ -86,39 +70,5 @@ h1 {
   margin: 1rem 0 0;
   font-size: 1.05rem;
   line-height: 1.7;
-}
-
-.nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-}
-
-.nav a {
-  padding: 0.8rem 1.15rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  text-decoration: none;
-  background: var(--color-surface);
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.nav a.router-link-active {
-  background: var(--color-active-bg);
-  border-color: var(--color-active-border);
-  color: var(--color-active-text);
-}
-
-.nav-button {
-  padding: 0.8rem 1.15rem;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-surface);
-  font: inherit;
-  cursor: pointer;
 }
 </style>
