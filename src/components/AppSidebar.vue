@@ -66,6 +66,32 @@ function initials(email) {
           </svg>
           Classes
         </RouterLink>
+
+        <RouterLink :to="{ name: 'tasks' }" class="nav-item" @click="closeSidebar">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M5 6.5h11M5 12h11M5 17.5h7M9 3.5l-2 2-1-1"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Tasks
+        </RouterLink>
+
+        <RouterLink :to="{ name: 'calendar' }" class="nav-item" @click="closeSidebar">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M5 9.5h14M7 4v3M17 4v3M6 6.5h12a1 1 0 0 1 1 1V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.5a1 1 0 0 1 1-1Z"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          Calendar
+        </RouterLink>
       </nav>
 
       <div class="sidebar-footer">

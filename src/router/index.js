@@ -47,6 +47,16 @@ export const routes = [
     component: () => import('@/views/DocumentReaderView.vue'),
     props: true,
   },
+  {
+    path: '/tasks',
+    name: 'tasks',
+    component: () => import('@/views/TasksView.vue'),
+  },
+  {
+    path: '/calendar',
+    name: 'calendar',
+    component: () => import('@/views/CalendarView.vue'),
+  },
 ]
 
 const router = createRouter({
