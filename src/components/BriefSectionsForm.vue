@@ -1,5 +1,5 @@
 <script setup>
-import SectionEditor from '@/components/SectionEditor.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 
 const props = defineProps({
   brief: { type: Object, required: true },
@@ -22,7 +22,7 @@ defineExpose({ getSectionEditor })
 
 <template>
   <div class="brief-sections-form">
-    <SectionEditor
+    <RichTextEditor
       v-for="section in props.templateSections"
       :key="section.key"
       :ref="(instance) => setEditorRef(section.key, instance)"

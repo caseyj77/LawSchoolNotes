@@ -1,5 +1,15 @@
 <script setup>
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
+const router = useRouter()
+
+async function handleLogOut() {
+  await authStore.signOut()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -12,9 +22,14 @@ import { RouterLink, RouterView } from 'vue-router'
         sections you need for school.
       </p>
       <nav class="nav">
-        <RouterLink to="/">Classes</RouterLink>
-        <RouterLink to="/login">Log in</RouterLink>
-        <RouterLink to="/signup">Create account</RouterLink>
+        <template v-if="authStore.session">
+          <RouterLink :to="{ name: 'course-outlines' }">Classes</RouterLink>
+          <button type="button" class="nav-button" @click="handleLogOut">Log out</button>
+        </template>
+        <template v-else>
+          <RouterLink :to="{ name: 'login' }">Log in</RouterLink>
+          <RouterLink :to="{ name: 'signup' }">Create account</RouterLink>
+        </template>
       </nav>
     </section>
 
@@ -96,5 +111,14 @@ h1 {
   background: var(--color-active-bg);
   border-color: var(--color-active-border);
   color: var(--color-active-text);
+}
+
+.nav-button {
+  padding: 0.8rem 1.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  font: inherit;
+  cursor: pointer;
 }
 </style>

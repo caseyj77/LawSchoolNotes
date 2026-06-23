@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { isJsonDocEmpty, renderRichTextToHtml } from '@/lib/renderRichText'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
@@ -26,7 +27,7 @@ async function handleDeleteClass() {
       : `Delete "${cls.value.title}"?`
   if (!window.confirm(message)) return
   await notesStore.deleteClass(classId.value)
-  router.push('/')
+  router.push({ name: 'course-outlines' })
 }
 </script>
 
@@ -45,7 +46,7 @@ async function handleDeleteClass() {
 
     <article class="panel">
       <p class="label">Outline</p>
-      <p v-if="cls.outline" class="supporting-copy outline-preview" v-html="cls.outline"></p>
+      <p v-if="!isJsonDocEmpty(cls.outline)" class="supporting-copy outline-preview" v-html="renderRichTextToHtml(cls.outline)"></p>
       <p v-else class="supporting-copy">No outline yet.</p>
       <RouterLink :to="`/class/${classId}/outline`">Open outline builder</RouterLink>
     </article>

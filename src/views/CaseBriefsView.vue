@@ -3,6 +3,8 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import BriefSectionsForm from '@/components/BriefSectionsForm.vue'
+import { isJsonDocEmpty, renderRichTextToHtml } from '@/lib/renderRichText'
+import { caseBriefSchema } from '@/schemas/caseBriefSchema'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
@@ -12,6 +14,7 @@ const notesStore = useNotesStore()
 const isLoading = ref(true)
 const brief = reactive({})
 const templateSections = ref([])
+const errors = ref({})
 
 onMounted(async () => {
   const sections = await notesStore.getTemplateSections()
@@ -26,7 +29,21 @@ onMounted(async () => {
 
 const studentNotesPreview = computed(() => brief.studentNotes || 'Add any notes for yourself.')
 
+// `brief` is a plain reactive object populated from an async load, not a
+// VeeValidate-bound form, so it's validated directly against the Zod schema
+// rather than through useForm's internal field state.
 async function handleSave() {
+  const result = caseBriefSchema.safeParse({
+    caseName: brief.caseName,
+    citation: brief.citation,
+    studentNotes: brief.studentNotes,
+  })
+  if (!result.success) {
+    errors.value = result.error.flatten().fieldErrors
+    return
+  }
+  errors.value = {}
+
   const saved = await notesStore.saveCaseBrief(brief)
   router.push(`/class/${saved.classId}`)
 }
@@ -51,6 +68,7 @@ async function handleSave() {
             type="text"
             placeholder="Palsgraf v. Long Island Railroad Co."
           >
+          <span v-if="errors.caseName?.[0]" class="field-error">{{ errors.caseName[0] }}</span>
         </label>
 
         <label>
@@ -86,7 +104,7 @@ async function handleSave() {
       <dl>
         <div v-for="section in templateSections" :key="section.key" class="preview-section">
           <dt>{{ section.label }}</dt>
-          <dd v-if="brief.sections[section.key]" v-html="brief.sections[section.key]"></dd>
+          <dd v-if="!isJsonDocEmpty(brief.sections[section.key])" v-html="renderRichTextToHtml(brief.sections[section.key])"></dd>
           <dd v-else class="placeholder">{{ section.placeholder }}</dd>
         </div>
         <div class="preview-section">
@@ -155,6 +173,12 @@ textarea {
 
 textarea {
   resize: vertical;
+}
+
+.field-error {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-error);
 }
 
 .save-button {

@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import DOMPurify from 'dompurify'
 import { convertToHtml } from 'mammoth'
 
 const emit = defineEmits(['capture'])
@@ -20,7 +21,7 @@ async function handleFileChange(event) {
   try {
     const buffer = await file.arrayBuffer()
     const result = await convertToHtml({ arrayBuffer: buffer })
-    html.value = result.value
+    html.value = DOMPurify.sanitize(result.value)
   } catch {
     errorMessage.value = 'Could not load this document.'
     html.value = ''

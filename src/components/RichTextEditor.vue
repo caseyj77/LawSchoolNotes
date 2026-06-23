@@ -4,7 +4,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { watch } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: String, default: '' },
+  modelValue: { type: Object, default: () => ({ type: 'doc', content: [] }) },
   label: { type: String, required: true },
   placeholder: { type: String, default: '' },
 })
@@ -15,7 +15,7 @@ const editor = useEditor({
   content: props.modelValue,
   extensions: [StarterKit],
   onUpdate: ({ editor: editorInstance }) => {
-    emit('update:modelValue', editorInstance.getHTML())
+    emit('update:modelValue', editorInstance.getJSON())
   },
 })
 
@@ -23,7 +23,7 @@ watch(
   () => props.modelValue,
   (value) => {
     if (!editor.value) return
-    if (value === editor.value.getHTML()) return
+    if (JSON.stringify(value) === JSON.stringify(editor.value.getJSON())) return
     editor.value.commands.setContent(value, { emitUpdate: false })
   },
 )

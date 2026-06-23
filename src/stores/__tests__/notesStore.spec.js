@@ -1,9 +1,15 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getCurrentUserId } from '@/lib/currentUser'
 import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
 import { createSupabaseMock } from '@/lib/__tests__/supabaseTestUtils'
+
+const TEST_USER_ID = 'test-user-id'
+const EMPTY_DOC = { type: 'doc', content: [] }
+
+function doc(text) {
+  return { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] }
+}
 
 const defaultTemplateSections = [
   { id: 'sec-facts', template_id: DEFAULT_TEMPLATE_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
@@ -14,7 +20,7 @@ const defaultTemplateSections = [
 ]
 
 const defaultClasses = [
-  { id: 'contracts', user_id: getCurrentUserId(), title: 'Contracts', focus: '', outline: '', last_active_brief_id: null },
+  { id: 'contracts', user_id: TEST_USER_ID, title: 'Contracts', focus: '', outline: EMPTY_DOC, last_active_brief_id: null },
 ]
 
 let supabaseMock
@@ -26,6 +32,10 @@ vi.mock('@/lib/supabaseClient', () => ({
 }))
 
 async function loadNotesStore() {
+  const { useAuthStore } = await import('@/stores/auth')
+  const authStore = useAuthStore()
+  authStore.user = { id: TEST_USER_ID }
+
   const { useNotesStore } = await import('../notesStore')
   const store = useNotesStore()
   await store.fetchClasses()
@@ -46,7 +56,7 @@ describe('useNotesStore', () => {
     expect(brief.id).toBeTruthy()
     expect(brief.classId).toBe('contracts')
     expect(brief.caseName).toBe('Hadley v. Baxendale')
-    expect(brief.sections.facts).toBe('')
+    expect(brief.sections.facts).toEqual(EMPTY_DOC)
     expect(store.getBriefById(brief.id).caseName).toBe('Hadley v. Baxendale')
   })
 
@@ -77,45 +87,46 @@ describe('useNotesStore', () => {
     const store = await loadNotesStore()
     const brief = await store.createBlankBrief('contracts')
     brief.caseName = 'Hadley'
-    brief.sections.facts = '<p>The mill shaft broke.</p>'
+    brief.sections.facts = doc('The mill shaft broke.')
 
     const saved = await store.saveCaseBrief(brief)
 
-    expect(supabaseMock.db.brief_sections.find((row) => row.brief_id === saved.id && row.template_section_id === 'sec-facts').content).toBe(
-      '<p>The mill shaft broke.</p>',
-    )
+    expect(
+      supabaseMock.db.brief_sections.find((row) => row.brief_id === saved.id && row.template_section_id === 'sec-facts')
+        .content,
+    ).toEqual(doc('The mill shaft broke.'))
   })
 
   it('seed classes start with an empty outline', async () => {
     const store = await loadNotesStore()
-    expect(store.getClassById('contracts').outline).toBe('')
+    expect(store.getClassById('contracts').outline).toEqual(EMPTY_DOC)
   })
 
-  it('updateOutline sets the outline HTML for an existing class', async () => {
+  it('updateOutline sets the outline content for an existing class', async () => {
     const store = await loadNotesStore()
-    store.updateOutline('contracts', '<p>Formation requires offer, acceptance, consideration.</p>')
+    store.updateOutline('contracts', doc('Formation requires offer, acceptance, consideration.'))
 
-    expect(store.getClassById('contracts').outline).toBe(
-      '<p>Formation requires offer, acceptance, consideration.</p>',
+    expect(store.getClassById('contracts').outline).toEqual(
+      doc('Formation requires offer, acceptance, consideration.'),
     )
   })
 
   it('updateOutline does nothing for an unknown class id', async () => {
     const store = await loadNotesStore()
-    expect(() => store.updateOutline('does-not-exist', '<p>x</p>')).not.toThrow()
+    expect(() => store.updateOutline('does-not-exist', doc('x'))).not.toThrow()
   })
 
   it('updateOutline persists to Supabase after the debounce window, coalescing rapid edits', async () => {
     vi.useFakeTimers()
     try {
       const store = await loadNotesStore()
-      store.updateOutline('contracts', '<p>first</p>')
-      store.updateOutline('contracts', '<p>second</p>')
+      store.updateOutline('contracts', doc('first'))
+      store.updateOutline('contracts', doc('second'))
 
       await vi.advanceTimersByTimeAsync(600)
 
       const row = supabaseMock.db.classes.find((cls) => cls.id === 'contracts')
-      expect(row.outline).toBe('<p>second</p>')
+      expect(row.outline).toEqual(doc('second'))
     } finally {
       vi.useRealTimers()
     }
@@ -125,7 +136,7 @@ describe('useNotesStore', () => {
     const store = await loadNotesStore()
     const created = await store.addClass({ title: 'Evidence', focus: 'Relevance and hearsay.' })
 
-    expect(created.outline).toBe('')
+    expect(created.outline).toEqual(EMPTY_DOC)
     expect(supabaseMock.db.classes.find((cls) => cls.id === created.id)).toBeTruthy()
   })
 

@@ -1,30 +1,35 @@
 <script setup>
+import { toTypedSchema } from '@vee-validate/zod'
 import { ref } from 'vue'
+import { useForm } from 'vee-validate'
 import { useRouter } from 'vue-router'
 
-import { supabase } from '@/lib/supabaseClient'
+import { signUpSchema } from '@/schemas/authSchema'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
-const email = ref('')
-const password = ref('')
+const { defineField, errors, handleSubmit: onValid } = useForm({
+  validationSchema: toTypedSchema(signUpSchema),
+})
+const [email] = defineField('email')
+const [password] = defineField('password')
+
 const error = ref('')
 const successMessage = ref('')
 const isSubmitting = ref(false)
 
-async function handleSubmit() {
+const handleSubmit = onValid(async (values) => {
   error.value = ''
   successMessage.value = ''
   isSubmitting.value = true
   try {
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: email.value,
-      password: password.value,
-    })
+    const { data, error: authError } = await authStore.signUpWithEmail(values.email, values.password)
     if (authError) throw authError
 
     if (data.session) {
-      router.push('/')
+      router.push({ name: 'course-outlines' })
     } else {
       successMessage.value = 'Check your email to confirm your account before logging in.'
     }
@@ -33,7 +38,7 @@ async function handleSubmit() {
   } finally {
     isSubmitting.value = false
   }
-}
+})
 </script>
 
 <template>
@@ -45,11 +50,13 @@ async function handleSubmit() {
       <form class="auth-form" @submit.prevent="handleSubmit">
         <label>
           Email
-          <input v-model.trim="email" type="email" required autocomplete="email">
+          <input v-model.trim="email" type="email" autocomplete="email">
+          <span v-if="errors.email" class="field-error">{{ errors.email }}</span>
         </label>
         <label>
           Password
-          <input v-model="password" type="password" required minlength="6" autocomplete="new-password">
+          <input v-model="password" type="password" autocomplete="new-password">
+          <span v-if="errors.password" class="field-error">{{ errors.password }}</span>
         </label>
         <p v-if="error" class="warning">{{ error }}</p>
         <p v-if="successMessage" class="success">{{ successMessage }}</p>
@@ -59,7 +66,7 @@ async function handleSubmit() {
       </form>
 
       <p class="supporting-copy">
-        Already have an account? <RouterLink to="/login">Log in</RouterLink>
+        Already have an account? <RouterLink :to="{ name: 'login' }">Log in</RouterLink>
       </p>
     </article>
   </section>
@@ -137,6 +144,12 @@ h2 {
   padding: 0.6rem 0.85rem;
   border-radius: 0.7rem;
   background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.field-error {
+  font-size: 0.85rem;
+  font-weight: 500;
   color: var(--color-error);
 }
 

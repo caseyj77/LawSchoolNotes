@@ -5,10 +5,13 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
 import { createSupabaseMock } from '@/lib/__tests__/supabaseTestUtils'
+import { useAuthStore } from '@/stores/auth'
 import { useNotesStore } from '@/stores/notesStore'
 
 import App from '../App.vue'
 import { routes } from '../router'
+
+const TEST_USER_ID = 'test-user-id'
 
 const defaultTemplateSections = [
   { id: 'sec-facts', template_id: DEFAULT_TEMPLATE_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
@@ -26,6 +29,24 @@ vi.mock('@/lib/supabaseClient', () => ({
   },
 }))
 
+// Route components are lazy-loaded, and the first import() of a heavy chain
+// (e.g. CaseBriefsView -> SectionEditor -> Tiptap) is real module-compilation
+// work that a single flushPromises() microtask flush won't wait out — poll
+// with real timer ticks instead.
+async function waitFor(assertion, { timeout = 2000, interval = 20 } = {}) {
+  const deadline = Date.now() + timeout
+  for (;;) {
+    try {
+      assertion()
+      return
+    } catch (error) {
+      if (Date.now() >= deadline) throw error
+      await flushPromises()
+      await new Promise((resolve) => setTimeout(resolve, interval))
+    }
+  }
+}
+
 async function mountApp(path) {
   const router = createRouter({
     history: createMemoryHistory(),
@@ -36,6 +57,7 @@ async function mountApp(path) {
   await router.isReady()
 
   const pinia = createPinia()
+  useAuthStore(pinia).user = { id: TEST_USER_ID }
   await useNotesStore(pinia).fetchClasses()
 
   const wrapper = mount(App, {
@@ -68,9 +90,9 @@ describe('LawSchoolNotes app', () => {
     await wrapper.get('input[placeholder="Class name"]').setValue('Evidence')
     await wrapper.get('input[placeholder="Focus (optional)"]').setValue('Relevance and hearsay.')
     await wrapper.get('.new-class-form').trigger('submit')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('Evidence')
+    // VeeValidate's schema validation resolves over a few more microtask hops
+    // than a single flushPromises() flush covers.
+    await waitFor(() => expect(wrapper.text()).toContain('Evidence'))
     expect(wrapper.find('a[href*="/class/"]').exists()).toBe(true)
   })
 
@@ -82,9 +104,7 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('No case briefs yet')
 
     await wrapper.get('a[href="/class/contracts/case-briefs/new"]').trigger('click')
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('Case brief builder')
+    await waitFor(() => expect(wrapper.text()).toContain('Case brief builder'))
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
     await wrapper.get('#citation').setValue('9 Ex. 341 (1854)')
     await wrapper.find('textarea[placeholder="Anything else worth remembering?"]').setValue(

@@ -4,6 +4,12 @@ import { mount } from '@vue/test-utils'
 
 import BriefSectionsForm from '../BriefSectionsForm.vue'
 
+const EMPTY_DOC = { type: 'doc', content: [] }
+
+function doc(text) {
+  return { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] }
+}
+
 const templateSections = [
   { key: 'facts', label: 'Facts', placeholder: 'What happened?' },
   { key: 'issue', label: 'Issue', placeholder: 'What legal question did the court resolve?' },
@@ -18,7 +24,9 @@ function mountForm(brief, sections = templateSections) {
 
 describe('BriefSectionsForm', () => {
   it('renders an editor for each section in the given template', () => {
-    const brief = reactive({ sections: { facts: '', issue: '', rule: '', analysis: '', conclusion: '' } })
+    const brief = reactive({
+      sections: { facts: EMPTY_DOC, issue: EMPTY_DOC, rule: EMPTY_DOC, analysis: EMPTY_DOC, conclusion: EMPTY_DOC },
+    })
     const wrapper = mountForm(brief)
 
     expect(wrapper.text()).toContain('Facts')
@@ -30,7 +38,7 @@ describe('BriefSectionsForm', () => {
 
   it('renders only the sections provided by the template, not a hardcoded set', () => {
     const shortTemplate = [{ key: 'summary', label: 'Summary', placeholder: 'Summarize it.' }]
-    const brief = reactive({ sections: { summary: '' } })
+    const brief = reactive({ sections: { summary: EMPTY_DOC } })
     const wrapper = mountForm(brief, shortTemplate)
 
     expect(wrapper.text()).toContain('Summary')
@@ -38,7 +46,9 @@ describe('BriefSectionsForm', () => {
   })
 
   it('exposes getSectionEditor so a parent can target a specific section', async () => {
-    const brief = reactive({ sections: { facts: '<p>Initial.</p>', issue: '', rule: '', analysis: '', conclusion: '' } })
+    const brief = reactive({
+      sections: { facts: doc('Initial.'), issue: EMPTY_DOC, rule: EMPTY_DOC, analysis: EMPTY_DOC, conclusion: EMPTY_DOC },
+    })
     const wrapper = mountForm(brief)
     await wrapper.vm.$nextTick()
 
@@ -48,7 +58,15 @@ describe('BriefSectionsForm', () => {
   })
 
   it('appending via the exposed editor does not overwrite existing content', async () => {
-    const brief = reactive({ sections: { facts: '<p>Existing facts.</p>', issue: '', rule: '', analysis: '', conclusion: '' } })
+    const brief = reactive({
+      sections: {
+        facts: doc('Existing facts.'),
+        issue: EMPTY_DOC,
+        rule: EMPTY_DOC,
+        analysis: EMPTY_DOC,
+        conclusion: EMPTY_DOC,
+      },
+    })
     const wrapper = mountForm(brief)
     await wrapper.vm.$nextTick()
 

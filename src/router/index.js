@@ -1,12 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import CaseBriefsView from '@/views/CaseBriefsView.vue'
-import ClassView from '@/views/ClassView.vue'
 import CourseOutlinesView from '@/views/CourseOutlinesView.vue'
-import DocumentReaderView from '@/views/DocumentReaderView.vue'
-import LoginView from '@/views/LoginView.vue'
-import OutlineBuilderView from '@/views/OutlineBuilderView.vue'
-import SignUpView from '@/views/SignUpView.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const PUBLIC_ROUTE_NAMES = new Set(['login', 'signup'])
 
 export const routes = [
   {
@@ -17,37 +14,37 @@ export const routes = [
   {
     path: '/login',
     name: 'login',
-    component: LoginView,
+    component: () => import('@/views/LoginView.vue'),
   },
   {
     path: '/signup',
     name: 'signup',
-    component: SignUpView,
+    component: () => import('@/views/SignUpView.vue'),
   },
   {
     path: '/class/:classId',
     name: 'class',
-    component: ClassView,
+    component: () => import('@/views/ClassView.vue'),
   },
   {
     path: '/class/:classId/outline',
     name: 'outline-builder',
-    component: OutlineBuilderView,
+    component: () => import('@/views/OutlineBuilderView.vue'),
   },
   {
     path: '/class/:classId/case-briefs/new',
     name: 'case-brief-new',
-    component: CaseBriefsView,
+    component: () => import('@/views/CaseBriefsView.vue'),
   },
   {
     path: '/class/:classId/case-briefs/:briefId',
     name: 'case-brief-edit',
-    component: CaseBriefsView,
+    component: () => import('@/views/CaseBriefsView.vue'),
   },
   {
     path: '/class/:classId/reader',
     name: 'reader',
-    component: DocumentReaderView,
+    component: () => import('@/views/DocumentReaderView.vue'),
     props: true,
   },
 ]
@@ -55,6 +52,13 @@ export const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+})
+
+router.beforeEach((to) => {
+  const authStore = useAuthStore()
+  if (!PUBLIC_ROUTE_NAMES.has(to.name) && !authStore.session) {
+    return { name: 'login' }
+  }
 })
 
 export default router

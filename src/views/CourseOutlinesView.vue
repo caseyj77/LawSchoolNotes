@@ -1,20 +1,27 @@
 <script setup>
-import { ref } from 'vue'
+import { toTypedSchema } from '@vee-validate/zod'
+import { onMounted } from 'vue'
+import { useForm } from 'vee-validate'
 
+import { classSchema } from '@/schemas/classSchema'
 import { useNotesStore } from '@/stores/notesStore'
 
 const notesStore = useNotesStore()
 
-const newTitle = ref('')
-const newFocus = ref('')
+const { defineField, errors, handleSubmit, resetForm } = useForm({
+  validationSchema: toTypedSchema(classSchema),
+})
+const [newTitle] = defineField('title')
+const [newFocus] = defineField('focus')
 
-async function handleAddClass() {
-  const title = newTitle.value.trim()
-  if (!title) return
-  await notesStore.addClass({ title, focus: newFocus.value.trim() })
-  newTitle.value = ''
-  newFocus.value = ''
-}
+onMounted(() => {
+  notesStore.fetchClasses()
+})
+
+const handleAddClass = handleSubmit(async (values) => {
+  await notesStore.addClass(values)
+  resetForm()
+})
 </script>
 
 <template>
@@ -46,10 +53,11 @@ async function handleAddClass() {
       <form class="new-class-form" @submit.prevent="handleAddClass">
         <p class="label">New class</p>
         <div class="new-class-fields">
-          <input v-model.trim="newTitle" type="text" placeholder="Class name" required>
+          <input v-model.trim="newTitle" type="text" placeholder="Class name">
           <input v-model.trim="newFocus" type="text" placeholder="Focus (optional)">
           <button type="submit">Add class</button>
         </div>
+        <span v-if="errors.title" class="field-error">{{ errors.title }}</span>
       </form>
     </article>
   </section>
@@ -157,5 +165,13 @@ h2 {
   color: var(--color-active-text);
   font: inherit;
   cursor: pointer;
+}
+
+.field-error {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-error);
 }
 </style>

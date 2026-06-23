@@ -1,13 +1,16 @@
 <script setup>
+import { toTypedSchema } from '@vee-validate/zod'
 import { computed, onMounted, ref } from 'vue'
+import { useForm } from 'vee-validate'
 import { RouterLink, useRoute } from 'vue-router'
 
 import BriefSectionsForm from '@/components/BriefSectionsForm.vue'
 import CaptureMenu from '@/components/CaptureMenu.vue'
 import DocxViewer from '@/components/DocxViewer.vue'
 import PdfViewer from '@/components/PdfViewer.vue'
-import SectionEditor from '@/components/SectionEditor.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 import { appendExcerpt } from '@/lib/excerptHtml'
+import { newBriefCaptureSchema } from '@/schemas/newBriefCaptureSchema'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
@@ -17,8 +20,8 @@ const classId = computed(() => route.params.classId)
 const cls = computed(() => notesStore.getClassById(classId.value))
 const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
 
-const outlineHtml = computed({
-  get: () => cls.value?.outline ?? '',
+const outlineContent = computed({
+  get: () => cls.value?.outline ?? { type: 'doc', content: [] },
   set: (value) => notesStore.updateOutline(classId.value, value),
 })
 
@@ -34,7 +37,13 @@ const briefSectionsFormRef = ref(null)
 const outlineEditorRef = ref(null)
 
 const isCreatingBrief = ref(false)
-const newBriefName = ref('')
+const {
+  defineField: defineNewBriefField,
+  errors: newBriefErrors,
+  handleSubmit: handleNewBriefSubmit,
+  resetForm: resetNewBriefForm,
+} = useForm({ validationSchema: toTypedSchema(newBriefCaptureSchema) })
+const [newBriefName] = defineNewBriefField('caseName')
 
 const captureMissingBriefMessage = ref('')
 const pendingCapture = ref(null)
@@ -60,15 +69,12 @@ async function handleSelectChange(event) {
   await notesStore.setActiveBriefForClass(classId.value, value)
 }
 
-async function handleCreateBrief() {
-  const caseName = newBriefName.value.trim()
-  if (!caseName) return
-
-  const created = await notesStore.createAndSaveBrief({ classId: classId.value, caseName })
+const handleCreateBrief = handleNewBriefSubmit(async (values) => {
+  const created = await notesStore.createAndSaveBrief({ classId: classId.value, caseName: values.caseName })
   activeBriefId.value = created.id
-  newBriefName.value = ''
+  resetNewBriefForm()
   isCreatingBrief.value = false
-}
+})
 
 function handleCapture({ text, source, position }) {
   captureMissingBriefMessage.value = ''
@@ -141,9 +147,9 @@ function handleSelectOutline() {
       <div class="right-column">
         <article class="panel outline-pane">
           <p class="label">Outline</p>
-          <SectionEditor
+          <RichTextEditor
             ref="outlineEditorRef"
-            v-model="outlineHtml"
+            v-model="outlineContent"
             label="Outline"
             placeholder="Capture outline notes here…"
           />
@@ -161,8 +167,9 @@ function handleSelectOutline() {
           </select>
 
           <form v-if="isCreatingBrief" class="new-brief-form" @submit.prevent="handleCreateBrief">
-            <input v-model.trim="newBriefName" type="text" placeholder="Case name" required>
+            <input v-model.trim="newBriefName" type="text" placeholder="Case name">
             <button type="submit">Create</button>
+            <span v-if="newBriefErrors.caseName" class="field-error">{{ newBriefErrors.caseName }}</span>
           </form>
 
           <p v-if="captureMissingBriefMessage" class="warning">{{ captureMissingBriefMessage }}</p>
@@ -191,7 +198,7 @@ function handleSelectOutline() {
   <section v-else class="content-grid">
     <article class="panel">
       <p>Class not found.</p>
-      <RouterLink to="/">← All classes</RouterLink>
+      <RouterLink :to="{ name: 'course-outlines' }">← All classes</RouterLink>
     </article>
   </section>
 </template>
@@ -291,7 +298,15 @@ h2 {
 
 .new-brief-form {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.new-brief-form .field-error {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-error);
 }
 
 .new-brief-form input {

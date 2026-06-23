@@ -14,11 +14,15 @@
     "@tiptap/pm": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
     "@tiptap/vue-3": "^3.27.1",
+    "@vee-validate/zod": "^4.15.1",
+    "dompurify": "^3.4.11",
     "mammoth": "^1.12.0",
     "pdfjs-dist": "^6.0.227",
     "pinia": "^3.0.4",
+    "vee-validate": "^4.15.1",
     "vue": "^3.5.38",
-    "vue-router": "^5.1.0"
+    "vue-router": "^5.1.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.7",

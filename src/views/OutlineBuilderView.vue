@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
-import SectionEditor from '@/components/SectionEditor.vue'
+import RichTextEditor from '@/components/RichTextEditor.vue'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
@@ -10,8 +10,8 @@ const notesStore = useNotesStore()
 
 const cls = computed(() => notesStore.getClassById(route.params.classId))
 
-const outlineHtml = computed({
-  get: () => cls.value?.outline ?? '',
+const outlineContent = computed({
+  get: () => cls.value?.outline ?? { type: 'doc', content: [] },
   set: (value) => notesStore.updateOutline(route.params.classId, value),
 })
 </script>
@@ -25,8 +25,8 @@ const outlineHtml = computed({
         Build your outline here, or capture excerpts into it from the document reader.
       </p>
 
-      <SectionEditor
-        v-model="outlineHtml"
+      <RichTextEditor
+        v-model="outlineContent"
         label="Outline"
         placeholder="Start building your outline…"
       />

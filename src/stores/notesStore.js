@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import { getCurrentUserId } from '@/lib/currentUser'
+import { EMPTY_DOC } from '@/lib/renderRichText'
 import { supabase } from '@/lib/supabaseClient'
 import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
+import { useAuthStore } from '@/stores/auth'
 
 const OUTLINE_PERSIST_DEBOUNCE_MS = 600
 const outlineDebounceTimers = new Map()
@@ -13,19 +14,19 @@ const seedClasses = [
     id: 'contracts',
     title: 'Contracts',
     focus: 'Formation, consideration, performance, and remedies.',
-    outline: '',
+    outline: EMPTY_DOC,
   },
   {
     id: 'torts',
     title: 'Torts',
     focus: 'Intentional torts, negligence, strict liability, and defenses.',
-    outline: '',
+    outline: EMPTY_DOC,
   },
   {
     id: 'civil-procedure',
     title: 'Civil Procedure',
     focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
-    outline: '',
+    outline: EMPTY_DOC,
   },
 ]
 
@@ -42,7 +43,7 @@ function shapeClass(row) {
 function shapeBrief(row, sectionRows, templateSections) {
   const keyByTemplateSectionId = new Map(templateSections.map((section) => [section.id, section.key]))
   const sections = {}
-  for (const section of templateSections) sections[section.key] = ''
+  for (const section of templateSections) sections[section.key] = EMPTY_DOC
   for (const sectionRow of sectionRows.filter((sectionRow) => sectionRow.brief_id === row.id)) {
     const key = keyByTemplateSectionId.get(sectionRow.template_section_id)
     if (key) sections[key] = sectionRow.content
@@ -61,17 +62,24 @@ function shapeBrief(row, sectionRows, templateSections) {
 }
 
 export const useNotesStore = defineStore('notes', () => {
+  const authStore = useAuthStore()
   const classes = ref([])
   const caseBriefs = ref([])
   const templateSections = ref([])
   const isLoading = ref(false)
   const error = ref(null)
 
+  function getUserId() {
+    const userId = authStore.user?.id
+    if (!userId) throw new Error('No authenticated user — cannot access notes data while logged out.')
+    return userId
+  }
+
   async function fetchClasses() {
     isLoading.value = true
     error.value = null
     try {
-      const userId = getCurrentUserId()
+      const userId = getUserId()
       const { data, error: dbError } = await supabase
         .from('classes')
         .select('*')
@@ -102,7 +110,7 @@ export const useNotesStore = defineStore('notes', () => {
     const id = crypto.randomUUID()
     const { data, error: insertError } = await supabase
       .from('classes')
-      .insert({ id, user_id: getCurrentUserId(), title, focus: focus ?? '', outline: '' })
+      .insert({ id, user_id: getUserId(), title, focus: focus ?? '', outline: EMPTY_DOC })
       .select()
       .single()
     if (insertError) throw insertError
@@ -117,11 +125,11 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   // Optimistic local mutate, persisted to Supabase on a debounce since this is
-  // called on every keystroke via SectionEditor's Tiptap onUpdate.
-  function updateOutline(classId, html) {
+  // called on every keystroke via RichTextEditor's Tiptap onUpdate.
+  function updateOutline(classId, content) {
     const cls = getClassById(classId)
     if (!cls) return
-    cls.outline = html
+    cls.outline = content
     scheduleOutlinePersist(classId)
   }
 
@@ -143,7 +151,7 @@ export const useNotesStore = defineStore('notes', () => {
       .from('classes')
       .update({ outline: cls.outline })
       .eq('id', classId)
-      .eq('user_id', getCurrentUserId())
+      .eq('user_id', getUserId())
     if (dbError) {
       error.value = dbError
       throw dbError
@@ -161,7 +169,7 @@ export const useNotesStore = defineStore('notes', () => {
       .from('classes')
       .update({ last_active_brief_id: briefId })
       .eq('id', classId)
-      .eq('user_id', getCurrentUserId())
+      .eq('user_id', getUserId())
     if (dbError) {
       error.value = dbError
       throw dbError
@@ -195,7 +203,7 @@ export const useNotesStore = defineStore('notes', () => {
     error.value = null
     try {
       const sections = await getTemplateSections()
-      const userId = getCurrentUserId()
+      const userId = getUserId()
 
       const { data: briefRows, error: briefsError } = await supabase
         .from('case_briefs')
@@ -232,7 +240,7 @@ export const useNotesStore = defineStore('notes', () => {
     error.value = null
     try {
       const sections = await getTemplateSections()
-      const userId = getCurrentUserId()
+      const userId = getUserId()
 
       const { data: rows, error: briefError } = await supabase
         .from('case_briefs')
@@ -269,13 +277,13 @@ export const useNotesStore = defineStore('notes', () => {
       caseName: '',
       citation: '',
       studentNotes: '',
-      sections: Object.fromEntries(sections.map((section) => [section.key, ''])),
+      sections: Object.fromEntries(sections.map((section) => [section.key, EMPTY_DOC])),
     }
   }
 
   async function saveCaseBrief(brief) {
     const sections = await getTemplateSections()
-    const userId = getCurrentUserId()
+    const userId = getUserId()
 
     let briefId = brief.id
     if (!briefId) {
@@ -311,7 +319,7 @@ export const useNotesStore = defineStore('notes', () => {
           brief_id: briefId,
           template_section_id: section.id,
           user_id: userId,
-          content: brief.sections?.[section.key] ?? '',
+          content: brief.sections?.[section.key] ?? EMPTY_DOC,
         },
         { onConflict: 'brief_id,template_section_id' },
       )
@@ -338,7 +346,7 @@ export const useNotesStore = defineStore('notes', () => {
       .from('classes')
       .delete()
       .eq('id', id)
-      .eq('user_id', getCurrentUserId())
+      .eq('user_id', getUserId())
     if (deleteError) throw deleteError
   }
 
