@@ -11,19 +11,16 @@ const outlineDebounceTimers = new Map()
 
 const seedClasses = [
   {
-    id: 'contracts',
     title: 'Contracts',
     focus: 'Formation, consideration, performance, and remedies.',
     outline: EMPTY_DOC,
   },
   {
-    id: 'torts',
     title: 'Torts',
     focus: 'Intentional torts, negligence, strict liability, and defenses.',
     outline: EMPTY_DOC,
   },
   {
-    id: 'civil-procedure',
     title: 'Civil Procedure',
     focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
     outline: EMPTY_DOC,
@@ -90,7 +87,7 @@ export const useNotesStore = defineStore('notes', () => {
       if (data.length === 0) {
         const { data: seeded, error: seedError } = await supabase
           .from('classes')
-          .insert(seedClasses.map((cls) => ({ ...cls, user_id: userId })))
+          .insert(seedClasses.map((cls) => ({ ...cls, id: crypto.randomUUID(), user_id: userId })))
           .select()
         if (seedError) throw seedError
         classes.value = seeded.map(shapeClass)

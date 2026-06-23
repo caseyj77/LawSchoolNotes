@@ -47,18 +47,21 @@ async function waitFor(assertion, { timeout = 2000, interval = 20 } = {}) {
   }
 }
 
+// `path` may be a function of the seeded classes, since class ids are
+// generated fresh on every seed (see notesStore.fetchClasses) rather than
+// fixed literals.
 async function mountApp(path) {
   const router = createRouter({
     history: createMemoryHistory(),
     routes,
   })
 
-  router.push(path)
-  await router.isReady()
-
   const pinia = createPinia()
   useAuthStore(pinia).user = { id: TEST_USER_ID }
-  await useNotesStore(pinia).fetchClasses()
+  const classes = await useNotesStore(pinia).fetchClasses()
+
+  router.push(typeof path === 'function' ? path(classes) : path)
+  await router.isReady()
 
   const wrapper = mount(App, {
     global: {
@@ -68,6 +71,10 @@ async function mountApp(path) {
 
   await flushPromises()
   return wrapper
+}
+
+function contractsClassId(classes) {
+  return classes.find((cls) => cls.title === 'Contracts').id
 }
 
 describe('LawSchoolNotes app', () => {
@@ -97,13 +104,17 @@ describe('LawSchoolNotes app', () => {
   })
 
   it('creates a case brief with a citation and student notes from the class view', async () => {
-    const wrapper = await mountApp('/class/contracts')
+    let classId
+    const wrapper = await mountApp((classes) => {
+      classId = contractsClassId(classes)
+      return `/class/${classId}`
+    })
 
     expect(wrapper.text()).toContain('Contracts')
     expect(wrapper.text()).toContain('No outline yet')
     expect(wrapper.text()).toContain('No case briefs yet')
 
-    await wrapper.get('a[href="/class/contracts/case-briefs/new"]').trigger('click')
+    await wrapper.get(`a[href="/class/${classId}/case-briefs/new"]`).trigger('click')
     await waitFor(() => expect(wrapper.text()).toContain('Case brief builder'))
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
     await wrapper.get('#citation').setValue('9 Ex. 341 (1854)')
@@ -125,7 +136,7 @@ describe('LawSchoolNotes app', () => {
   it('deletes a class and its case briefs after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    const wrapper = await mountApp('/class/contracts/case-briefs/new')
+    const wrapper = await mountApp((classes) => `/class/${contractsClassId(classes)}/case-briefs/new`)
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
     await wrapper.get('.save-button').trigger('click')
     await flushPromises()
