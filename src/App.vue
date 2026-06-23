@@ -1,24 +1,24 @@
 <script setup>
 import { RouterView } from 'vue-router'
 
-import AppHeader from '@/components/AppHeader.vue'
+import AppSidebar from '@/components/AppSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 </script>
 
 <template>
-  <AppHeader />
+  <div v-if="authStore.session" class="app-layout">
+    <AppSidebar />
+    <main class="app-content">
+      <RouterView />
+    </main>
+  </div>
 
-  <main class="app-shell">
-    <section class="hero">
-      <p class="eyebrow">Law School Notes</p>
-      <h1>Organize course materials and build case briefs in one place.</h1>
-      <p class="intro">
-        Use the workspace to keep class outlines visible and draft briefs with the standard case
-        sections you need for school.
-      </p>
-    </section>
-
+  <div v-else class="public-shell">
+    <p class="public-brand">Law School Notes</p>
     <RouterView />
-  </main>
+  </div>
 </template>
 
 <style scoped>
@@ -38,37 +38,35 @@ import AppHeader from '@/components/AppHeader.vue'
   color: inherit;
 }
 
-.app-shell {
+.app-layout {
   min-height: 100vh;
+}
+
+.app-content {
+  margin-left: var(--sidebar-width);
   max-width: 1100px;
-  margin: 0 auto;
+  padding: 2.5rem 2rem;
+}
+
+@media (max-width: 900px) {
+  .app-content {
+    margin-left: 0;
+    padding: 1.5rem;
+  }
+}
+
+.public-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 3rem 1.5rem;
 }
 
-.hero {
-  margin-bottom: 2rem;
-}
-
-.eyebrow {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+.public-brand {
+  margin: 0 0 2rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-accent);
-}
-
-h1 {
-  margin: 0;
-  max-width: 12ch;
-  font-size: clamp(2.5rem, 5vw, 4.5rem);
-  line-height: 0.98;
-}
-
-.intro {
-  max-width: 45rem;
-  margin: 1rem 0 0;
-  font-size: 1.05rem;
-  line-height: 1.7;
+  font-size: 1.1rem;
+  color: var(--color-text);
 }
 </style>

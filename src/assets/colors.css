@@ -28,4 +28,7 @@
   --shadow-color-light: rgba(31, 32, 65, 0.06);
   --shadow-color: rgba(31, 32, 65, 0.08);
   --shadow-color-dark: rgba(31, 32, 65, 0.16);
+
+  /* Layout */
+  --sidebar-width: 17rem;
 }
