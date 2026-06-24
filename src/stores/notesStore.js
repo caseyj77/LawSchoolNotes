@@ -355,6 +355,44 @@ export const useNotesStore = defineStore('notes', () => {
     return saveCaseBrief(blank)
   }
 
+  // Append ProseMirror/Tiptap `nodes` to the end of one brief section and
+  // persist just that section. Used by the reader's "send to case brief" flow,
+  // which (unlike the brief builder) has no save button — without this the
+  // capture would only live in the open editor and be lost on reload. Works for
+  // any brief, including one that isn't currently open (no mounted editor): the
+  // reactive section update is reflected live by RichTextEditor's modelValue
+  // watch when the brief is open, and simply persisted when it isn't.
+  async function appendToBriefSection({ briefId, sectionKey, nodes }) {
+    const brief = getBriefById(briefId)
+    if (!brief) throw new Error('Cannot append to a brief that is not loaded.')
+
+    const sections = await getTemplateSections()
+    const templateSection = sections.find((section) => section.key === sectionKey)
+    if (!templateSection) throw new Error(`Unknown brief section: ${sectionKey}`)
+
+    const current = brief.sections[sectionKey] ?? EMPTY_DOC
+    const nextContent = {
+      type: current.type ?? 'doc',
+      content: [...(current.content ?? []), ...nodes],
+    }
+    brief.sections[sectionKey] = nextContent
+
+    const { error: upsertError } = await supabase.from('brief_sections').upsert(
+      {
+        brief_id: briefId,
+        template_section_id: templateSection.id,
+        user_id: getUserId(),
+        content: nextContent,
+      },
+      { onConflict: 'brief_id,template_section_id' },
+    )
+    if (upsertError) {
+      error.value = upsertError
+      throw upsertError
+    }
+    return nextContent
+  }
+
   async function deleteCourse(id) {
     courses.value = courses.value.filter((course) => course.id !== id)
     caseBriefs.value = caseBriefs.value.filter((brief) => brief.courseId !== id)
@@ -390,5 +428,6 @@ export const useNotesStore = defineStore('notes', () => {
     saveCaseBrief,
     createBlankBrief,
     createAndSaveBrief,
+    appendToBriefSection,
   }
 })
