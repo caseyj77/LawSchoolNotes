@@ -85,7 +85,7 @@ function handleContextMenu(event) {
 }
 
 onBeforeUnmount(() => {
-  pdfDoc.value?.destroy()
+  pdfDoc.value?.loadingTask?.destroy()
 })
 </script>
 
