@@ -1,30 +1,30 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import DOMPurify from 'dompurify'
 import { convertToHtml } from 'mammoth'
 
+const props = defineProps({
+  data: { type: ArrayBuffer, default: null },
+  filename: { type: String, default: '' },
+})
 const emit = defineEmits(['capture'])
 
-const filename = ref('')
 const html = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
 
-async function handleFileChange(event) {
-  const file = event.target.files?.[0]
-  if (!file) return
-
+async function loadDocument(buffer) {
+  html.value = ''
   errorMessage.value = ''
-  isLoading.value = true
-  filename.value = file.name
 
+  if (!buffer) return
+
+  isLoading.value = true
   try {
-    const buffer = await file.arrayBuffer()
-    const result = await convertToHtml({ arrayBuffer: buffer })
+    const result = await convertToHtml({ arrayBuffer: buffer.slice(0) })
     html.value = DOMPurify.sanitize(result.value)
   } catch {
     errorMessage.value = 'Could not load this document.'
-    html.value = ''
   } finally {
     isLoading.value = false
   }
@@ -37,26 +37,26 @@ function handleContextMenu(event) {
   event.preventDefault()
   emit('capture', {
     text,
-    source: { filename: filename.value },
+    source: { filename: props.filename },
     position: { x: event.clientX, y: event.clientY },
   })
 }
+
+watch(
+  () => props.data,
+  (buffer) => {
+    loadDocument(buffer)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <div class="docx-viewer">
-    <div class="toolbar">
-      <input type="file" accept=".docx" @change="handleFileChange">
-    </div>
-
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
     <p v-else-if="isLoading" class="status">Loading…</p>
 
     <div v-if="html" class="document-shell" @contextmenu="handleContextMenu" v-html="html"></div>
-
-    <p v-if="!html && !isLoading && !errorMessage" class="status">
-      Upload a .docx file to start reading.
-    </p>
   </div>
 </template>
 
@@ -68,7 +68,7 @@ function handleContextMenu(event) {
 
 .document-shell {
   overflow: auto;
-  max-height: 70vh;
+  height: 80vh;
   padding: 1.5rem;
   border: 1px solid var(--color-border);
   border-radius: 1rem;

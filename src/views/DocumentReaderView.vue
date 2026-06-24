@@ -11,10 +11,12 @@ import PdfViewer from '@/components/PdfViewer.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { appendExcerpt } from '@/lib/excerptHtml'
 import { newBriefCaptureSchema } from '@/schemas/newBriefCaptureSchema'
+import { useDocumentsStore } from '@/stores/documentsStore'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
 const notesStore = useNotesStore()
+const documentsStore = useDocumentsStore()
 
 const courseId = computed(() => route.params.courseId)
 const course = computed(() => notesStore.getCourseById(courseId.value))
@@ -32,9 +34,17 @@ const activeBrief = computed(() =>
   activeBriefId.value ? notesStore.getBriefById(activeBriefId.value) : null,
 )
 
-const documentType = ref('pdf')
 const briefSectionsFormRef = ref(null)
 const outlineEditorRef = ref(null)
+
+const activeDocumentId = ref(null)
+const activeDocumentData = ref(null)
+const activeDocument = computed(() =>
+  documentsStore.documents.find((doc) => doc.id === activeDocumentId.value) ?? null,
+)
+const initialPage = ref(1)
+const isUploading = ref(false)
+const uploadError = ref('')
 
 const isCreatingBrief = ref(false)
 const {
@@ -49,13 +59,58 @@ const captureMissingBriefMessage = ref('')
 const pendingCapture = ref(null)
 const menuPosition = ref(null)
 
+async function openDocument(doc, page = 1) {
+  activeDocumentId.value = doc.id
+  initialPage.value = page
+  activeDocumentData.value = await documentsStore.downloadDocument(doc.storagePath)
+}
+
+async function handleUpload(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  isUploading.value = true
+  uploadError.value = ''
+  try {
+    const created = await documentsStore.uploadDocument(courseId.value, file)
+    await openDocument(created)
+  } catch (e) {
+    uploadError.value = e.message || 'Could not upload this file.'
+  } finally {
+    isUploading.value = false
+    event.target.value = ''
+  }
+}
+
+async function handleDeleteDocument(id) {
+  await documentsStore.deleteDocument(id)
+  if (activeDocumentId.value === id) {
+    activeDocumentId.value = null
+    activeDocumentData.value = null
+  }
+}
+
 onMounted(async () => {
+  // A direct/bookmarked/shared link (e.g. the "back to source" quote link)
+  // can land here before notesStore.courses has ever been fetched — that
+  // only normally happens via CourseOutlinesView's own onMounted, so a cold
+  // load straight into this route would otherwise show "Course not found."
+  if (!notesStore.courses.length) await notesStore.fetchCourses()
+
   templateSections.value = await notesStore.getTemplateSections()
   await notesStore.loadBriefsForCourse(courseId.value)
+  await documentsStore.fetchDocuments(courseId.value)
 
   const lastActiveId = notesStore.getActiveBriefForCourse(courseId.value)
   const stillExists = lastActiveId && notesStore.getBriefById(lastActiveId)
   activeBriefId.value = stillExists ? lastActiveId : briefs.value[0]?.id ?? null
+
+  const queryDocId = route.query.docId
+  if (queryDocId) {
+    const targetDoc = documentsStore.documents.find((doc) => doc.id === queryDocId)
+    if (targetDoc) await openDocument(targetDoc, route.query.page ? Number(route.query.page) : 1)
+  }
+
   isLoading.value = false
 })
 
@@ -78,7 +133,10 @@ const handleCreateBrief = handleNewBriefSubmit(async (values) => {
 
 function handleCapture({ text, source, position }) {
   captureMissingBriefMessage.value = ''
-  pendingCapture.value = { text, source }
+  const enrichedSource = activeDocument.value
+    ? { ...source, courseId: courseId.value, documentId: activeDocument.value.id }
+    : source
+  pendingCapture.value = { text, source: enrichedSource }
   menuPosition.value = position
 }
 
@@ -107,6 +165,10 @@ function handleSelectOutline() {
   }
   closeMenu()
 }
+
+function formatDate(isoString) {
+  return new Date(isoString).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
 </script>
 
 <template>
@@ -123,25 +185,51 @@ function handleSelectOutline() {
 
     <div class="reader-layout">
       <article class="panel document-pane">
-        <div class="document-toggle">
-          <button
-            type="button"
-            :class="{ active: documentType === 'pdf' }"
-            @click="documentType = 'pdf'"
-          >
-            PDF
-          </button>
-          <button
-            type="button"
-            :class="{ active: documentType === 'docx' }"
-            @click="documentType = 'docx'"
-          >
-            Word document
-          </button>
+        <div class="documents-header">
+          <p class="label">Documents</p>
+          <label class="upload-button">
+            {{ isUploading ? 'Uploading…' : '+ Upload document' }}
+            <input type="file" accept=".pdf,.docx" :disabled="isUploading" @change="handleUpload">
+          </label>
         </div>
+        <p v-if="uploadError" class="field-error">{{ uploadError }}</p>
 
-        <PdfViewer v-if="documentType === 'pdf'" @capture="handleCapture" />
-        <DocxViewer v-else @capture="handleCapture" />
+        <ul v-if="documentsStore.documents.length" class="document-list">
+          <li
+            v-for="doc in documentsStore.documents"
+            :key="doc.id"
+            :class="{ active: doc.id === activeDocumentId }"
+          >
+            <button type="button" class="document-item" @click="openDocument(doc)">
+              <span class="document-name">{{ doc.filename }}</span>
+              <span class="document-date">{{ formatDate(doc.createdAt) }}</span>
+            </button>
+            <button
+              type="button"
+              class="document-delete"
+              aria-label="Delete document"
+              @click="handleDeleteDocument(doc.id)"
+            >
+              ×
+            </button>
+          </li>
+        </ul>
+        <p v-else class="supporting-copy">No documents uploaded yet.</p>
+
+        <PdfViewer
+          v-if="activeDocument?.fileType === 'pdf'"
+          :data="activeDocumentData"
+          :filename="activeDocument.filename"
+          :initial-page="initialPage"
+          @capture="handleCapture"
+        />
+        <DocxViewer
+          v-else-if="activeDocument?.fileType === 'docx'"
+          :data="activeDocumentData"
+          :filename="activeDocument.filename"
+          @capture="handleCapture"
+        />
+        <p v-else class="supporting-copy">Upload a document or pick one above to start reading.</p>
       </article>
 
       <div class="right-column">
@@ -237,13 +325,6 @@ h2 {
 .reader-layout {
   display: grid;
   gap: 1.5rem;
-  grid-template-columns: 2fr 1fr;
-}
-
-@media (max-width: 900px) {
-  .reader-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 .panel {
@@ -254,32 +335,112 @@ h2 {
   box-shadow: 0 18px 45px var(--shadow-color-light);
 }
 
-.document-toggle {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+.document-pane {
+  display: grid;
+  gap: 1rem;
 }
 
-.document-toggle button {
-  padding: 0.5rem 0.9rem;
+.documents-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upload-button {
+  position: relative;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--color-active-border);
+  border-radius: 999px;
+  background: var(--color-active-bg);
+  color: var(--color-active-text);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.upload-button input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.document-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.document-list li {
+  display: flex;
+  align-items: center;
   border: 1px solid var(--color-border-strong);
   border-radius: 0.7rem;
   background: var(--color-surface);
-  color: var(--color-text);
-  cursor: pointer;
-  font: inherit;
+  overflow: hidden;
 }
 
-.document-toggle button.active {
-  background: var(--color-active-bg);
+.document-list li.active {
   border-color: var(--color-active-border);
-  color: var(--color-active-text);
+  background: var(--color-bg-alt);
+}
+
+.document-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.document-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.document-date {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.document-delete {
+  align-self: stretch;
+  padding: 0 0.6rem;
+  border: none;
+  border-left: 1px solid var(--color-border-strong);
+  background: none;
+  color: var(--color-disabled);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.document-delete:hover {
+  color: var(--color-error);
 }
 
 .right-column {
   display: grid;
   gap: 1.5rem;
+  grid-template-columns: 1fr 1fr;
   align-content: start;
+}
+
+@media (max-width: 900px) {
+  .right-column {
+    grid-template-columns: 1fr;
+  }
 }
 
 .brief-pane {
@@ -326,6 +487,12 @@ h2 {
   color: var(--color-active-text);
   cursor: pointer;
   font: inherit;
+}
+
+.field-error {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-error);
 }
 
 .warning {

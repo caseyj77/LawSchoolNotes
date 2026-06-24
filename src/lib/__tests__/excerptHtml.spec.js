@@ -22,6 +22,41 @@ describe('buildExcerptNode', () => {
 
     expect(node[0].content[0].content[0].text).toBe('<script>alert(1)</script> & "quotes"')
   })
+
+  it('links the citation back to the source document and page when courseId/documentId are present', () => {
+    const node = buildExcerptNode('foreseeable damages', {
+      filename: 'hadley.pdf',
+      page: 3,
+      courseId: 'contracts',
+      documentId: 'doc-1',
+    })
+
+    const citationMarks = node[1].content[0].marks
+    expect(citationMarks).toEqual([
+      { type: 'italic' },
+      { type: 'link', attrs: { href: '/course/contracts/reader?docId=doc-1&page=3' } },
+    ])
+  })
+
+  it('links to the document without a page for sources with no page (e.g. docx)', () => {
+    const node = buildExcerptNode('foreseeable damages', {
+      filename: 'hadley.docx',
+      courseId: 'contracts',
+      documentId: 'doc-1',
+    })
+
+    const citationMarks = node[1].content[0].marks
+    expect(citationMarks).toEqual([
+      { type: 'italic' },
+      { type: 'link', attrs: { href: '/course/contracts/reader?docId=doc-1' } },
+    ])
+  })
+
+  it('omits the link mark when courseId/documentId are not provided', () => {
+    const node = buildExcerptNode('foreseeable damages', { filename: 'hadley.pdf', page: 3 })
+
+    expect(node[1].content[0].marks).toEqual([{ type: 'italic' }])
+  })
 })
 
 describe('appendExcerpt', () => {
