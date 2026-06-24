@@ -14,16 +14,19 @@ const seedCourses = [
     title: 'Contracts',
     focus: 'Formation, consideration, performance, and remedies.',
     outline: EMPTY_DOC,
+    color: '#4b3f72',
   },
   {
     title: 'Torts',
     focus: 'Intentional torts, negligence, strict liability, and defenses.',
     outline: EMPTY_DOC,
+    color: '#417b5a',
   },
   {
     title: 'Civil Procedure',
     focus: 'Jurisdiction, pleading, discovery, and summary judgment.',
     outline: EMPTY_DOC,
+    color: '#1f2041',
   },
 ]
 
@@ -33,6 +36,7 @@ function shapeCourse(row) {
     title: row.title,
     focus: row.focus,
     outline: row.outline,
+    color: row.color,
     lastActiveBriefId: row.last_active_brief_id,
   }
 }
@@ -103,11 +107,11 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  async function addCourse({ title, focus }) {
+  async function addCourse({ title, focus, color }) {
     const id = crypto.randomUUID()
     const { data, error: insertError } = await supabase
       .from('classes')
-      .insert({ id, user_id: getUserId(), title, focus: focus ?? '', outline: EMPTY_DOC })
+      .insert({ id, user_id: getUserId(), title, focus: focus ?? '', outline: EMPTY_DOC, color: color || '#4b3f72' })
       .select()
       .single()
     if (insertError) throw insertError

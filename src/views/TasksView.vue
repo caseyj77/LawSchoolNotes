@@ -1,12 +1,13 @@
 <script setup>
 import { toTypedSchema } from '@vee-validate/zod'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import draggable from 'vuedraggable'
 import { VueDatePicker } from '@vuepic/vue-datepicker'
 
 import { taskSchema } from '@/schemas/taskSchema'
 import { TASK_STATUSES, useTasksStore } from '@/stores/tasksStore'
+import { useNotesStore } from '@/stores/notesStore'
 
 const COLUMNS = [
   { status: 'todo', label: 'To Do' },
@@ -15,6 +16,7 @@ const COLUMNS = [
 ]
 
 const tasksStore = useTasksStore()
+const notesStore = useNotesStore()
 const isLoading = ref(true)
 
 // vuedraggable needs a plain, settable ref per column to splice/reassign
@@ -35,10 +37,14 @@ function syncColumnsFromStore() {
 }
 
 onMounted(async () => {
-  await tasksStore.fetchTasks()
+  await Promise.all([tasksStore.fetchTasks(), notesStore.fetchCourses()])
   syncColumnsFromStore()
   isLoading.value = false
 })
+
+function courseColor(courseId) {
+  return notesStore.getCourseById(courseId)?.color ?? 'transparent'
+}
 
 async function handleDragEnd() {
   for (const status of TASK_STATUSES) {
@@ -50,27 +56,51 @@ async function handleDragEnd() {
   await tasksStore.persistAll()
 }
 
-const { defineField, errors, handleSubmit, resetForm } = useForm({
+const { defineField, errors, handleSubmit, resetForm, setValues } = useForm({
   validationSchema: toTypedSchema(taskSchema),
 })
 const [title] = defineField('title')
 const [description] = defineField('description')
 const [startDate] = defineField('startDate')
 const [dueDate] = defineField('dueDate')
+const [tags] = defineField('tags')
+const [courseId] = defineField('courseId')
 
 const isFormOpen = ref(false)
+const editingTaskId = ref(null)
+const submitLabel = computed(() => (editingTaskId.value ? 'Save changes' : 'Add task'))
 
-function openForm() {
+function openCreateForm() {
+  editingTaskId.value = null
+  resetForm()
+  isFormOpen.value = true
+}
+
+function openEditForm(task) {
+  editingTaskId.value = task.id
+  setValues({
+    title: task.title,
+    description: task.description,
+    startDate: task.startDate ?? '',
+    dueDate: task.dueDate ?? '',
+    tags: task.tags.join(', '),
+    courseId: task.courseId ?? '',
+  })
   isFormOpen.value = true
 }
 
 function closeForm() {
   isFormOpen.value = false
+  editingTaskId.value = null
   resetForm()
 }
 
-const handleAddTask = handleSubmit(async (values) => {
-  await tasksStore.addTask(values)
+const handleSubmitTask = handleSubmit(async (values) => {
+  if (editingTaskId.value) {
+    await tasksStore.updateTask(editingTaskId.value, values)
+  } else {
+    await tasksStore.addTask(values)
+  }
   syncColumnsFromStore()
   closeForm()
 })
@@ -89,10 +119,10 @@ async function handleDeleteTask(id) {
           <p class="label">Tasks</p>
           <h2>Track what's due across every class.</h2>
         </div>
-        <button type="button" class="add-task-button" @click="openForm">+ New task</button>
+        <button type="button" class="add-task-button" @click="openCreateForm">+ New task</button>
       </div>
 
-      <form v-if="isFormOpen" class="task-form" @submit.prevent="handleAddTask">
+      <form v-if="isFormOpen" class="task-form" @submit.prevent="handleSubmitTask">
         <div class="task-form-fields">
           <label>
             Title
@@ -125,9 +155,22 @@ async function handleDeleteTask(id) {
               placeholder="Optional"
             />
           </label>
+          <label>
+            Tags
+            <input v-model.trim="tags" type="text" placeholder="reading, exam-prep">
+          </label>
+          <label>
+            Course
+            <select v-model="courseId" class="task-course-select">
+              <option value="">No course</option>
+              <option v-for="course in notesStore.courses" :key="course.id" :value="course.id">
+                {{ course.title }}
+              </option>
+            </select>
+          </label>
         </div>
         <div class="task-form-actions">
-          <button type="submit" class="save-button">Add task</button>
+          <button type="submit" class="save-button">{{ submitLabel }}</button>
           <button type="button" class="cancel-button" @click="closeForm">Cancel</button>
         </div>
       </form>
@@ -153,14 +196,28 @@ async function handleDeleteTask(id) {
                   <span v-if="element.startDate">Start {{ element.startDate }}</span>
                   <span v-if="element.dueDate">Due {{ element.dueDate }}</span>
                 </p>
-                <button
-                  type="button"
-                  class="task-delete"
-                  aria-label="Delete task"
-                  @click="handleDeleteTask(element.id)"
-                >
-                  ×
-                </button>
+                <p v-if="element.tags.length" class="task-tags">
+                  <span v-for="tag in element.tags" :key="tag" class="tag-pill">{{ tag }}</span>
+                </p>
+                <div class="task-card-buttons">
+                  <button
+                    type="button"
+                    class="task-edit"
+                    aria-label="Edit task"
+                    @click="openEditForm(element)"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    type="button"
+                    class="task-delete"
+                    aria-label="Delete task"
+                    @click="handleDeleteTask(element.id)"
+                  >
+                    ×
+                  </button>
+                </div>
+                <div class="task-course-bar" :style="{ background: courseColor(element.courseId) }"></div>
               </article>
             </template>
           </draggable>
@@ -242,7 +299,8 @@ h2 {
   font-weight: 600;
 }
 
-.task-form input {
+.task-form input,
+.task-course-select {
   padding: 0.7rem 0.9rem;
   border: 1px solid var(--color-border-strong);
   border-radius: 0.9rem;
@@ -325,11 +383,12 @@ h2 {
 
 .task-card {
   position: relative;
-  padding: 0.85rem 1rem;
+  padding: 0.85rem 1.5rem 0.85rem 1rem;
   border-radius: 0.85rem;
   background: var(--color-surface);
   box-shadow: 0 8px 20px var(--shadow-color-light);
   cursor: grab;
+  overflow: hidden;
 }
 
 .task-card-ghost {
@@ -338,7 +397,7 @@ h2 {
 
 .task-title {
   margin: 0;
-  padding-right: 1.25rem;
+  padding-right: 2.25rem;
   font-weight: 600;
 }
 
@@ -358,10 +417,32 @@ h2 {
   color: var(--color-accent);
 }
 
-.task-delete {
+.task-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+}
+
+.tag-pill {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-bg-alt);
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.task-card-buttons {
   position: absolute;
   top: 0.5rem;
-  right: 0.6rem;
+  right: 0.85rem;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.task-edit,
+.task-delete {
   border: none;
   background: none;
   color: var(--color-disabled);
@@ -370,7 +451,19 @@ h2 {
   cursor: pointer;
 }
 
+.task-edit:hover {
+  color: var(--color-accent);
+}
+
 .task-delete:hover {
   color: var(--color-error);
+}
+
+.task-course-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 5%;
 }
 </style>

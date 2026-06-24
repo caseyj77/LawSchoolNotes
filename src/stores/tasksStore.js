@@ -15,7 +15,16 @@ function shapeTask(row) {
     position: row.position,
     startDate: row.start_date,
     dueDate: row.due_date,
+    tags: row.tags ?? [],
+    courseId: row.course_id,
   }
+}
+
+function parseTags(tags) {
+  return (tags ?? '')
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
 }
 
 export const useTasksStore = defineStore('tasks', () => {
@@ -50,7 +59,7 @@ export const useTasksStore = defineStore('tasks', () => {
     }
   }
 
-  async function addTask({ title, description, startDate, dueDate }) {
+  async function addTask({ title, description, startDate, dueDate, tags, courseId }) {
     const userId = getUserId()
     const status = 'todo'
     const position = tasks.value.filter((task) => task.status === status).length
@@ -64,6 +73,8 @@ export const useTasksStore = defineStore('tasks', () => {
         position,
         start_date: startDate || null,
         due_date: dueDate || null,
+        tags: parseTags(tags),
+        course_id: courseId || null,
       })
       .select()
       .single()
@@ -72,6 +83,29 @@ export const useTasksStore = defineStore('tasks', () => {
     const created = shapeTask(data)
     tasks.value.push(created)
     return created
+  }
+
+  async function updateTask(id, { title, description, startDate, dueDate, tags, courseId }) {
+    const { data, error: updateError } = await supabase
+      .from('tasks')
+      .update({
+        title,
+        description: description ?? '',
+        start_date: startDate || null,
+        due_date: dueDate || null,
+        tags: parseTags(tags),
+        course_id: courseId || null,
+      })
+      .eq('id', id)
+      .eq('user_id', getUserId())
+      .select()
+      .single()
+    if (updateError) throw updateError
+
+    const updated = shapeTask(data)
+    const existing = tasks.value.find((task) => task.id === id)
+    if (existing) Object.assign(existing, updated)
+    return updated
   }
 
   async function deleteTask(id) {
@@ -104,6 +138,7 @@ export const useTasksStore = defineStore('tasks', () => {
     error,
     fetchTasks,
     addTask,
+    updateTask,
     deleteTask,
     persistAll,
   }

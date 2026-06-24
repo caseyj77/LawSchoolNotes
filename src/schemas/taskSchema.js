@@ -5,4 +5,6 @@ export const taskSchema = z.object({
   description: z.string().trim().optional().default(''),
   startDate: z.string().trim().optional().default(''),
   dueDate: z.string().trim().optional().default(''),
+  tags: z.string().trim().optional().default(''),
+  courseId: z.string().trim().optional().default(''),
 })

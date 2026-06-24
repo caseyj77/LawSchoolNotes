@@ -13,6 +13,7 @@ const { defineField, errors, handleSubmit, resetForm } = useForm({
 })
 const [newTitle] = defineField('title')
 const [newFocus] = defineField('focus')
+const [newColor] = defineField('color')
 
 onMounted(() => {
   notesStore.fetchCourses()
@@ -55,6 +56,7 @@ const handleAddCourse = handleSubmit(async (values) => {
         <div class="new-course-fields">
           <input v-model.trim="newTitle" type="text" placeholder="Course name">
           <input v-model.trim="newFocus" type="text" placeholder="Focus (optional)">
+          <input v-model="newColor" type="color" class="color-input" aria-label="Course color">
           <button type="submit">Add course</button>
         </div>
         <span v-if="errors.title" class="field-error">{{ errors.title }}</span>
@@ -155,6 +157,13 @@ h2 {
   border-radius: 0.9rem;
   font: inherit;
   background: var(--color-surface-alt);
+}
+
+.new-course-fields .color-input {
+  flex: 0 0 3rem;
+  min-width: 3rem;
+  width: 3rem;
+  padding: 0.2rem;
 }
 
 .new-course-fields button {
