@@ -57,12 +57,39 @@ export const useAnnotationsStore = defineStore('annotations', () => {
     }
   }
 
-  // Phase 1+ — intentionally not implemented yet. Exposed so the store's public
-  // API is visible for review, but guarded so nothing wires up to them early.
-  function create() {
-    throw new Error('annotationsStore.create not implemented (Phase 1+)')
+  async function create(payload) {
+    error.value = null
+    try {
+      const insertRow = {
+        user_id: getUserId(),
+        document_id: payload.documentId,
+        source_type: payload.sourceType,
+        kind: payload.kind ?? 'highlight',
+        color: payload.color ?? 'yellow',
+        page_index: payload.pageIndex ?? null,
+        anchor: payload.anchor,
+        quote: payload.quote,
+        comment: payload.comment ?? null,
+      }
+      const { data, error: insertError } = await supabase
+        .from('annotations')
+        .insert(insertRow)
+        .select()
+        .single()
+      if (insertError) throw insertError
+
+      const created = shapeAnnotation(data)
+      const list = byDocument.value[created.documentId] ?? (byDocument.value[created.documentId] = [])
+      list.push(created)
+      return created
+    } catch (e) {
+      error.value = e
+      throw e
+    }
   }
 
+  // Phase 2+ — intentionally not implemented yet. Exposed so the store's public
+  // API is visible for review, but guarded so nothing wires up to them early.
   function update() {
     throw new Error('annotationsStore.update not implemented (Phase 1+)')
   }
