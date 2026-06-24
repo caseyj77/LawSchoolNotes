@@ -75,6 +75,7 @@ describe('CaptureMenu', () => {
     await openBriefs(wrapper)
     await byText(wrapper, 'button.new-brief', '+ New case brief').trigger('click')
     await wrapper.get('input.new-brief-input').setValue('Palsgraf')
+    await byText(wrapper, 'button.new-brief-next', 'Next').trigger('click')
     await byText(wrapper, 'button.section-row', 'Facts').trigger('click')
 
     expect(wrapper.emitted('create-brief-section')).toEqual([
