@@ -143,6 +143,14 @@ src/
   ```
 - Prefer small, single-purpose components over large ones with many responsibilities — if a component file is doing more than one clear job, that's a signal to split it.
 
+## Styling Gotchas
+
+- **Native `<button>` text/border color doesn't inherit from `body`, and can vanish under OS dark mode.** Browsers' UA stylesheet gives `<button>` a default `color: buttontext` (a system color keyword) — this does *not* inherit the page's `color`, even if you set one on `body`. `buttontext`/`buttonface` resolve differently depending on whether the OS/browser is in light or dark mode. If a button rule sets a custom `background` (e.g. white) but never sets an explicit `color`, the text is invisible (white-on-white) for any user whose system is in dark mode — while buttons that *do* set `color` explicitly (active/toggle states, etc.) render fine, making the bug easy to miss in your own light-mode dev environment.
+  - **Fix, two parts:**
+    1. Add `color-scheme: light` to the global `body` rule (next to wherever `color`/`background` are set) for any app that's light-mode-only (no dark theme variant) — this opts the page out of the browser's automatic system-color swapping entirely.
+    2. Still explicitly set `color: var(--color-text)` (or whatever the theme's text variable is) on every custom button rule, rather than relying on inheritance — don't assume a button's text color "just works" because the surrounding text does. Treat `color-scheme: light` as the belt, explicit `color` per button as the suspenders.
+  - This isn't limited to `<button>` — `<select>`, `<input>`, and other form controls have the same system-color-keyword defaults, so apply the same explicit-`color` discipline to those too.
+
 ## What to do when something isn't covered here
 
 If a project needs something this skill doesn't specify yet (a backend choice, a UI library, a deployment target), don't silently invent a default and bury it in code — say so explicitly, suggest a sensible option, and ask whether to add it to this skill so future projects inherit the same answer.
