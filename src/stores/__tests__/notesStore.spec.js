@@ -1,22 +1,31 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
 import { createSupabaseMock } from '@/lib/__tests__/supabaseTestUtils'
 
 const TEST_USER_ID = 'test-user-id'
+const TEST_TEMPLATE_ID = 'test-template'
 const EMPTY_DOC = { type: 'doc', content: [] }
 
 function doc(text) {
   return { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text }] }] }
 }
 
+// The store provisions a per-user template lazily; seed one already owned by the
+// test user (with stable section ids the assertions reference) so getTemplateSections
+// resolves it instead of creating a fresh one.
+const defaultTemplates = [{ id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, name: 'Law School Case Brief' }]
+
 const defaultTemplateSections = [
-  { id: 'sec-facts', template_id: DEFAULT_TEMPLATE_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
-  { id: 'sec-issue', template_id: DEFAULT_TEMPLATE_ID, key: 'issue', label: 'Issue', placeholder: '', position: 2 },
-  { id: 'sec-rule', template_id: DEFAULT_TEMPLATE_ID, key: 'rule', label: 'Rule', placeholder: '', position: 3 },
-  { id: 'sec-analysis', template_id: DEFAULT_TEMPLATE_ID, key: 'analysis', label: 'Analysis', placeholder: '', position: 4 },
-  { id: 'sec-conclusion', template_id: DEFAULT_TEMPLATE_ID, key: 'conclusion', label: 'Conclusion', placeholder: '', position: 5 },
+  { id: 'sec-facts', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
+  { id: 'sec-procedural', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'procedural_history', label: 'Procedural History', placeholder: '', position: 2 },
+  { id: 'sec-issue', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'issue', label: 'Issue', placeholder: '', position: 3 },
+  { id: 'sec-rule', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'rule', label: 'Rule', placeholder: '', position: 4 },
+  { id: 'sec-holding', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'holding', label: 'Holding', placeholder: '', position: 5 },
+  { id: 'sec-analysis', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'analysis', label: 'Analysis / Reasoning', placeholder: '', position: 6 },
+  { id: 'sec-conclusion', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'conclusion', label: 'Conclusion / Disposition', placeholder: '', position: 7 },
+  { id: 'sec-concurrence', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'concurrence_dissent', label: 'Concurrence / Dissent', placeholder: '', position: 8 },
+  { id: 'sec-policy', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'policy_notes', label: 'Policy / Notes', placeholder: '', position: 9 },
 ]
 
 const defaultCourses = [
@@ -46,7 +55,11 @@ describe('useNotesStore', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
-    supabaseMock = createSupabaseMock({ template_sections: defaultTemplateSections, classes: defaultCourses })
+    supabaseMock = createSupabaseMock({
+      templates: defaultTemplates,
+      template_sections: defaultTemplateSections,
+      classes: defaultCourses,
+    })
   })
 
   it('createAndSaveBrief generates an id, sets courseId, and starts with blank sections', async () => {

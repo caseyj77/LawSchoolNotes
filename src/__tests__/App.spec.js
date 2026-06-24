@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { flushPromises, mount } from '@vue/test-utils'
 
-import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
 import { createSupabaseMock } from '@/lib/__tests__/supabaseTestUtils'
 import { useAuthStore } from '@/stores/auth'
 import { useNotesStore } from '@/stores/notesStore'
@@ -12,13 +11,16 @@ import App from '../App.vue'
 import { routes } from '../router'
 
 const TEST_USER_ID = 'test-user-id'
+const TEST_TEMPLATE_ID = 'test-template'
+
+const defaultTemplates = [{ id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, name: 'Law School Case Brief' }]
 
 const defaultTemplateSections = [
-  { id: 'sec-facts', template_id: DEFAULT_TEMPLATE_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
-  { id: 'sec-issue', template_id: DEFAULT_TEMPLATE_ID, key: 'issue', label: 'Issue', placeholder: '', position: 2 },
-  { id: 'sec-rule', template_id: DEFAULT_TEMPLATE_ID, key: 'rule', label: 'Rule', placeholder: '', position: 3 },
-  { id: 'sec-analysis', template_id: DEFAULT_TEMPLATE_ID, key: 'analysis', label: 'Analysis', placeholder: '', position: 4 },
-  { id: 'sec-conclusion', template_id: DEFAULT_TEMPLATE_ID, key: 'conclusion', label: 'Conclusion', placeholder: '', position: 5 },
+  { id: 'sec-facts', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'facts', label: 'Facts', placeholder: '', position: 1 },
+  { id: 'sec-issue', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'issue', label: 'Issue', placeholder: '', position: 3 },
+  { id: 'sec-rule', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'rule', label: 'Rule', placeholder: '', position: 4 },
+  { id: 'sec-analysis', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'analysis', label: 'Analysis / Reasoning', placeholder: '', position: 6 },
+  { id: 'sec-conclusion', template_id: TEST_TEMPLATE_ID, user_id: TEST_USER_ID, key: 'conclusion', label: 'Conclusion / Disposition', placeholder: '', position: 7 },
 ]
 
 let supabaseMock
@@ -80,7 +82,10 @@ function contractsCourseId(courses) {
 describe('LawSchoolNotes app', () => {
   beforeEach(() => {
     localStorage.clear()
-    supabaseMock = createSupabaseMock({ template_sections: defaultTemplateSections })
+    supabaseMock = createSupabaseMock({
+      templates: defaultTemplates,
+      template_sections: defaultTemplateSections,
+    })
   })
 
   it('shows the course outlines view on the home route', async () => {
@@ -138,6 +143,7 @@ describe('LawSchoolNotes app', () => {
 
     const wrapper = await mountApp((courses) => `/course/${contractsCourseId(courses)}/case-briefs/new`)
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
+    await wrapper.get('#citation').setValue('9 Ex. 341 (1854)')
     await wrapper.get('.save-button').trigger('click')
     await flushPromises()
 

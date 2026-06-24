@@ -5,6 +5,6 @@ import { z } from 'zod'
 // (see isJsonDocEmpty in @/lib/renderRichText), not a save-blocking rule.
 export const caseBriefSchema = z.object({
   caseName: z.string().trim().min(1, 'Case name is required'),
-  citation: z.string().trim().optional().default(''),
+  citation: z.string().trim().min(1, 'Citation is required'),
   studentNotes: z.string().trim().optional().default(''),
 })

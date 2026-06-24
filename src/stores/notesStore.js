@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 import { EMPTY_DOC } from '@/lib/renderRichText'
 import { supabase } from '@/lib/supabaseClient'
-import { DEFAULT_TEMPLATE_ID } from '@/lib/templates'
+import { DEFAULT_BRIEF_SECTIONS, DEFAULT_TEMPLATE_NAME } from '@/lib/templates'
 import { useAuthStore } from '@/stores/auth'
 
 const OUTLINE_PERSIST_DEBOUNCE_MS = 600
@@ -67,6 +67,9 @@ export const useNotesStore = defineStore('notes', () => {
   const courses = ref([])
   const caseBriefs = ref([])
   const templateSections = ref([])
+  // The signed-in user's brief template id, resolved lazily by
+  // getTemplateSections() and reused when creating/saving briefs.
+  let defaultTemplateId = null
   const isLoading = ref(false)
   const error = ref(null)
 
@@ -193,17 +196,98 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  async function getTemplateSections(templateId = DEFAULT_TEMPLATE_ID) {
+  // Resolves the signed-in user's brief template, provisioning it on first use.
+  //
+  // The default template + sections are owned per-user (RLS scopes every row to
+  // auth.uid()), so there is no global seed an authenticated user can read — we
+  // create their template the first time they need it. We also reconcile any
+  // canonical sections that are missing, so users who were seeded an earlier
+  // (smaller) set automatically gain newly added sections. Existing briefs show
+  // those new sections as empty because shapeBrief defaults any section without
+  // a saved row to an empty document.
+  async function getTemplateSections() {
     if (templateSections.value.length) return templateSections.value
+    const userId = getUserId()
 
-    const { data, error: dbError } = await supabase
-      .from('template_sections')
-      .select('*')
-      .eq('template_id', templateId)
-      .order('position')
-    if (dbError) throw dbError
+    const { data: templates, error: templatesError } = await supabase
+      .from('templates')
+      .select('id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+    if (templatesError) throw templatesError
 
-    templateSections.value = data
+    let templateId = templates?.[0]?.id
+    if (!templateId) {
+      const { data: created, error: createTemplateError } = await supabase
+        .from('templates')
+        .insert({ user_id: userId, name: DEFAULT_TEMPLATE_NAME })
+        .select('id')
+        .single()
+      if (createTemplateError) throw createTemplateError
+      templateId = created.id
+    }
+
+    const fetchSections = () =>
+      supabase
+        .from('template_sections')
+        .select('*')
+        .eq('template_id', templateId)
+        .order('position', { ascending: true })
+
+    let { data: sections, error: sectionsError } = await fetchSections()
+    if (sectionsError) throw sectionsError
+
+    const existingKeys = new Set((sections ?? []).map((section) => section.key))
+    const missing = DEFAULT_BRIEF_SECTIONS.filter((section) => !existingKeys.has(section.key))
+    if (missing.length) {
+      const { error: insertError } = await supabase.from('template_sections').insert(
+        missing.map((section) => ({
+          template_id: templateId,
+          user_id: userId,
+          label: section.label,
+          key: section.key,
+          placeholder: section.placeholder,
+          position: section.position,
+        })),
+      )
+      if (insertError) throw insertError
+      ;({ data: sections, error: sectionsError } = await fetchSections())
+      if (sectionsError) throw sectionsError
+    }
+
+    // Reconcile order/labels for users whose sections were created against an
+    // earlier definition: missing sections are only inserted above, so a
+    // reordering or relabel of an existing section has to be pushed here.
+    const canonicalByKey = new Map(DEFAULT_BRIEF_SECTIONS.map((section) => [section.key, section]))
+    for (const row of sections) {
+      const canonical = canonicalByKey.get(row.key)
+      if (!canonical) continue
+      if (
+        row.position === canonical.position &&
+        row.label === canonical.label &&
+        row.placeholder === canonical.placeholder
+      ) {
+        continue
+      }
+      const { error: updateError } = await supabase
+        .from('template_sections')
+        .update({
+          position: canonical.position,
+          label: canonical.label,
+          placeholder: canonical.placeholder,
+        })
+        .eq('id', row.id)
+      if (updateError) throw updateError
+      Object.assign(row, {
+        position: canonical.position,
+        label: canonical.label,
+        placeholder: canonical.placeholder,
+      })
+    }
+    sections.sort((a, b) => a.position - b.position)
+
+    defaultTemplateId = templateId
+    templateSections.value = sections
     return templateSections.value
   }
 
@@ -290,7 +374,7 @@ export const useNotesStore = defineStore('notes', () => {
     const sections = await getTemplateSections()
     return {
       courseId,
-      templateId: DEFAULT_TEMPLATE_ID,
+      templateId: defaultTemplateId,
       caseName: '',
       citation: '',
       studentNotes: '',
@@ -308,7 +392,7 @@ export const useNotesStore = defineStore('notes', () => {
         .from('case_briefs')
         .insert({
           user_id: userId,
-          template_id: brief.templateId ?? DEFAULT_TEMPLATE_ID,
+          template_id: brief.templateId ?? defaultTemplateId,
           class_id: brief.courseId,
           case_name: brief.caseName ?? '',
           citation: brief.citation ?? '',
