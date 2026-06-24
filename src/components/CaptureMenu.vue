@@ -53,6 +53,7 @@ const briefExpanded = ref(false)
   border: none;
   border-radius: 0.6rem;
   background: none;
+  color: var(--color-text);
   text-align: left;
   font: inherit;
   cursor: pointer;
@@ -84,6 +85,7 @@ const briefExpanded = ref(false)
   padding: 0.5rem 0.75rem;
   border: none;
   background: none;
+  color: var(--color-text);
   text-align: left;
   font: inherit;
   cursor: pointer;

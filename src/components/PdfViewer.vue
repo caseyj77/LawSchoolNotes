@@ -141,6 +141,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--color-border-strong);
   border-radius: 0.7rem;
   background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   font: inherit;
 }

@@ -219,6 +219,7 @@ function initials(email) {
   border: 1px solid var(--color-border-strong);
   border-radius: 0.75rem;
   background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
   font-size: 0.85rem;
   font-weight: 600;

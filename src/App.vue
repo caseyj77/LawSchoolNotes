@@ -28,6 +28,7 @@ const authStore = useAuthStore()
     Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
+  color-scheme: light;
 }
 
 :global(*) {
