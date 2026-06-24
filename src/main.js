@@ -3,6 +3,7 @@ import { createApp } from 'vue'
 
 import '@vuepic/vue-datepicker/dist/main.css'
 
+import './assets/tailwind.css'
 import './assets/colors.css'
 import { useAuthStore } from './stores/auth'
 import App from './App.vue'

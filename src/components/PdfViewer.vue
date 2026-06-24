@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { GlobalWorkerOptions, TextLayer, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import PdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import 'pdfjs-dist/legacy/web/pdf_viewer.css'
@@ -7,7 +7,13 @@ import 'pdfjs-dist/legacy/web/pdf_viewer.css'
 GlobalWorkerOptions.workerSrc = PdfWorker
 
 const RESIZE_DEBOUNCE_MS = 150
-const MAX_SCALE = 2.5
+const MIN_SCALE = 0.5
+const MAX_SCALE = 4
+const ZOOM_STEP = 1.2
+
+function clampScale(value) {
+  return Math.min(Math.max(value, MIN_SCALE), MAX_SCALE)
+}
 
 const props = defineProps({
   data: { type: ArrayBuffer, default: null },
@@ -24,6 +30,13 @@ const currentPage = ref(1)
 const pageCount = ref(0)
 const isLoading = ref(false)
 const errorMessage = ref('')
+// null = auto fit-to-width; a number = an explicit user-chosen scale.
+const zoomScale = ref(null)
+// The actual scale used for the most recent render, so the zoom % readout and
+// the zoom-in/out steps work off what's really on screen (incl. auto-fit).
+const renderedScale = ref(1)
+
+const zoomPercent = computed(() => `${Math.round(renderedScale.value * 100)}%`)
 
 let resizeObserver = null
 let resizeTimer = null
@@ -52,6 +65,8 @@ async function loadDocument(buffer) {
     pdfDoc.value = doc
     pageCount.value = doc.numPages
     currentPage.value = Math.min(Math.max(props.initialPage, 1), doc.numPages)
+    zoomScale.value = null // each newly opened document starts at fit-to-width
+
     // canvas-shell is v-show toggled by pdfDoc — wait for that DOM update to
     // flush before measuring its size, or the very first render computes a
     // fit-scale against a still-hidden (0-size) container.
@@ -69,10 +84,14 @@ async function renderPage(pageNumber) {
 
   const page = await pdfDoc.value.getPage(pageNumber)
   const unscaled = page.getViewport({ scale: 1 })
+  // Default to fitting the page to the available *width* (not width AND height):
+  // fitting to height as well shrank portrait pages to a small column. The
+  // canvas-shell scrolls vertically, so width-fit fills the pane and stays
+  // readable. An explicit user zoom overrides the auto fit.
   const availableWidth = canvasShellRef.value.clientWidth || unscaled.width
-  const availableHeight = canvasShellRef.value.clientHeight || unscaled.height
-  const fitScale = Math.min(availableWidth / unscaled.width, availableHeight / unscaled.height)
-  const scale = Math.min(fitScale > 0 ? fitScale : 1, MAX_SCALE)
+  const fitWidthScale = availableWidth / unscaled.width || 1
+  const scale = clampScale(zoomScale.value ?? fitWidthScale)
+  renderedScale.value = scale
 
   const viewport = page.getViewport({ scale })
   const canvas = canvasRef.value
@@ -119,6 +138,30 @@ async function goToPage(delta) {
   await renderPage(next)
 }
 
+async function applyZoom(scale) {
+  const clamped = clampScale(scale)
+  // Already at the rail and asked to push further — nothing to do.
+  if (clamped === zoomScale.value) return
+  zoomScale.value = clamped
+  await renderPage(currentPage.value)
+}
+
+// Step relative to what's actually on screen, so the first zoom-in/out from
+// auto fit-to-width moves from the visible size rather than a fixed 100%.
+function zoomIn() {
+  return applyZoom(renderedScale.value * ZOOM_STEP)
+}
+
+function zoomOut() {
+  return applyZoom(renderedScale.value / ZOOM_STEP)
+}
+
+async function resetZoom() {
+  if (zoomScale.value === null) return
+  zoomScale.value = null
+  await renderPage(currentPage.value)
+}
+
 function handleContextMenu(event) {
   const text = window.getSelection()?.toString().trim()
   if (!text) return
@@ -163,6 +206,29 @@ onBeforeUnmount(() => {
       <button type="button" :disabled="currentPage <= 1" @click="goToPage(-1)">Prev</button>
       <span>Page {{ currentPage }} / {{ pageCount }}</span>
       <button type="button" :disabled="currentPage >= pageCount" @click="goToPage(1)">Next</button>
+
+      <span class="pager-spacer"></span>
+
+      <div class="zoom-controls">
+        <button
+          type="button"
+          aria-label="Zoom out"
+          :disabled="renderedScale <= MIN_SCALE"
+          @click="zoomOut"
+        >
+          −
+        </button>
+        <span class="zoom-readout">{{ zoomPercent }}</span>
+        <button
+          type="button"
+          aria-label="Zoom in"
+          :disabled="renderedScale >= MAX_SCALE"
+          @click="zoomIn"
+        >
+          +
+        </button>
+        <button type="button" :disabled="zoomScale === null" @click="resetZoom">Fit width</button>
+      </div>
     </div>
 
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
@@ -187,6 +253,24 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pager-spacer {
+  flex: 1 1 auto;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.zoom-readout {
+  min-width: 3.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
 }
 
 .pager button {
