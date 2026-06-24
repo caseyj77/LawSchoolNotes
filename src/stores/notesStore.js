@@ -125,6 +125,22 @@ export const useNotesStore = defineStore('notes', () => {
     return courses.value.find((course) => course.id === id)
   }
 
+  async function updateCourse(id, { title, focus, color }) {
+    const { data, error: updateError } = await supabase
+      .from('classes')
+      .update({ title, focus: focus ?? '', color: color || '#4b3f72' })
+      .eq('id', id)
+      .eq('user_id', getUserId())
+      .select()
+      .single()
+    if (updateError) throw updateError
+
+    const updated = shapeCourse(data)
+    const existing = getCourseById(id)
+    if (existing) Object.assign(existing, updated)
+    return updated
+  }
+
   // Optimistic local mutate, persisted to Supabase on a debounce since this is
   // called on every keystroke via RichTextEditor's Tiptap onUpdate.
   function updateOutline(courseId, content) {
@@ -359,6 +375,7 @@ export const useNotesStore = defineStore('notes', () => {
     error,
     fetchCourses,
     addCourse,
+    updateCourse,
     getCourseById,
     updateOutline,
     persistOutline,

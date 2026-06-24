@@ -1,8 +1,11 @@
 <script setup>
+import { toTypedSchema } from '@vee-validate/zod'
 import { computed, onMounted, ref } from 'vue'
+import { useForm } from 'vee-validate'
 import { useRoute, useRouter } from 'vue-router'
 
 import { isJsonDocEmpty, renderRichTextToHtml } from '@/lib/renderRichText'
+import { courseSchema } from '@/schemas/courseSchema'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
@@ -29,19 +32,69 @@ async function handleDeleteCourse() {
   await notesStore.deleteCourse(courseId.value)
   router.push({ name: 'course-outlines' })
 }
+
+const { defineField, errors, handleSubmit, setValues } = useForm({
+  validationSchema: toTypedSchema(courseSchema),
+})
+const [editTitle] = defineField('title')
+const [editFocus] = defineField('focus')
+const [editColor] = defineField('color')
+
+const isEditing = ref(false)
+
+function openEdit() {
+  setValues({
+    title: course.value.title,
+    focus: course.value.focus,
+    color: course.value.color,
+  })
+  isEditing.value = true
+}
+
+function closeEdit() {
+  isEditing.value = false
+}
+
+const handleSaveCourse = handleSubmit(async (values) => {
+  await notesStore.updateCourse(courseId.value, values)
+  isEditing.value = false
+})
 </script>
 
 <template>
   <section v-if="course" class="content-grid">
     <article class="panel panel-wide">
-      <div class="panel-header">
+      <div v-if="!isEditing" class="panel-header">
         <div>
           <p class="label">Course</p>
           <h2>{{ course.title }}</h2>
         </div>
         <p class="supporting-copy">{{ course.focus }}</p>
-        <button type="button" class="danger" @click="handleDeleteCourse">Delete course</button>
+        <div class="header-buttons">
+          <button type="button" class="edit-button" @click="openEdit">Edit course</button>
+          <button type="button" class="danger" @click="handleDeleteCourse">Delete course</button>
+        </div>
       </div>
+
+      <form v-else class="edit-form" @submit.prevent="handleSaveCourse">
+        <label>
+          Title
+          <input v-model.trim="editTitle" type="text">
+          <span v-if="errors.title" class="field-error">{{ errors.title }}</span>
+        </label>
+        <label>
+          Description
+          <input v-model.trim="editFocus" type="text" placeholder="Focus (optional)">
+        </label>
+        <label>
+          Color
+          <input v-model="editColor" type="color" class="color-input" aria-label="Course color">
+        </label>
+        <div class="header-buttons">
+          <button type="submit" class="save-button">Save changes</button>
+          <button type="button" class="cancel-button" @click="closeEdit">Cancel</button>
+        </div>
+      </form>
     </article>
 
     <article class="panel">
@@ -153,8 +206,12 @@ h2 {
   margin: 0 0 0.5rem;
 }
 
+.header-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
 .danger {
-  justify-self: start;
   padding: 0.6rem 1rem;
   border: 1px solid var(--color-error);
   border-radius: 0.9rem;
@@ -162,5 +219,64 @@ h2 {
   color: var(--color-error);
   cursor: pointer;
   font: inherit;
+}
+
+.edit-button {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.9rem;
+  background: var(--color-surface);
+  cursor: pointer;
+  font: inherit;
+}
+
+.edit-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.edit-form label {
+  display: grid;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.edit-form input {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.9rem;
+  font: inherit;
+  background: var(--color-surface-alt);
+}
+
+.edit-form .color-input {
+  width: 3rem;
+  padding: 0.2rem;
+}
+
+.field-error {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-error);
+}
+
+.save-button {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--color-active-border);
+  border-radius: 0.9rem;
+  background: var(--color-active-bg);
+  color: var(--color-active-text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-button {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.9rem;
+  background: var(--color-surface);
+  font: inherit;
+  cursor: pointer;
 }
 </style>
