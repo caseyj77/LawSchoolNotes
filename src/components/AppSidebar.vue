@@ -1,11 +1,15 @@
 <script setup>
-import { ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
+import { COURSE_SECTION_ROUTE_NAMES } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+
+const isCoursesSectionActive = computed(() => COURSE_SECTION_ROUTE_NAMES.has(route.name))
 
 const isOpen = ref(false)
 
@@ -54,7 +58,11 @@ function initials(email) {
       </RouterLink>
 
       <nav class="nav">
-        <RouterLink :to="{ name: 'course-outlines' }" class="nav-item" @click="closeSidebar">
+        <RouterLink
+          :to="{ name: 'course-outlines' }"
+          :class="['nav-item', { 'router-link-active': isCoursesSectionActive }]"
+          @click="closeSidebar"
+        >
           <svg class="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M4 19.5V6a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v15M4 19.5A2.5 2.5 0 0 1 6.5 17H17M9 7h4"

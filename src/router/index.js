@@ -5,6 +5,15 @@ import { useAuthStore } from '@/stores/auth'
 
 const PUBLIC_ROUTE_NAMES = new Set(['login', 'signup'])
 
+export const COURSE_SECTION_ROUTE_NAMES = new Set([
+  'course-outlines',
+  'course',
+  'outline-builder',
+  'case-brief-new',
+  'case-brief-edit',
+  'reader',
+])
+
 export const routes = [
   {
     path: '/',
