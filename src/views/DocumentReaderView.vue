@@ -10,7 +10,7 @@ import DocxViewer from '@/components/DocxViewer.vue'
 import PdfViewer from '@/components/PdfViewer.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { DEFAULT_ANNOTATION_COLOR } from '@/lib/annotationColors'
-import { appendExcerpt } from '@/lib/excerptHtml'
+import { appendExcerpt, buildExcerptNode } from '@/lib/excerptHtml'
 import { newBriefCaptureSchema } from '@/schemas/newBriefCaptureSchema'
 import { useAnnotationsStore } from '@/stores/annotationsStore'
 import { useDocumentsStore } from '@/stores/documentsStore'
@@ -61,7 +61,6 @@ const {
 } = useForm({ validationSchema: toTypedSchema(newBriefCaptureSchema) })
 const [newBriefName] = defineNewBriefField('caseName')
 
-const captureMissingBriefMessage = ref('')
 const pendingCapture = ref(null)
 const menuPosition = ref(null)
 
@@ -141,7 +140,6 @@ const handleCreateBrief = handleNewBriefSubmit(async (values) => {
 })
 
 function handleCapture({ text, source, anchor = null, pageIndex = null, position }) {
-  captureMissingBriefMessage.value = ''
   const enrichedSource = activeDocument.value
     ? { ...source, courseId: courseId.value, documentId: activeDocument.value.id }
     : source
@@ -154,16 +152,42 @@ function closeMenu() {
   menuPosition.value = null
 }
 
-function handleSelectSection(sectionKey) {
-  if (!activeBriefId.value) {
-    captureMissingBriefMessage.value = 'Select or create a case brief first.'
-    closeMenu()
-    return
+// Append the captured excerpt to a brief section (persisted), and — for PDF
+// selections that carry anchor geometry — leave an orange "sent to brief"
+// highlight on the source so it's visible what was already pulled.
+async function commitBriefCapture(briefId, sectionKey) {
+  const capture = pendingCapture.value
+  if (!capture) return
+  await notesStore.appendToBriefSection({
+    briefId,
+    sectionKey,
+    nodes: buildExcerptNode(capture.text, capture.source),
+  })
+  if (capture.anchor && activeDocument.value) {
+    await annotationsStore.create({
+      documentId: activeDocument.value.id,
+      sourceType: 'pdf',
+      kind: 'highlight',
+      color: 'orange',
+      pageIndex: capture.pageIndex,
+      anchor: capture.anchor,
+      quote: capture.text,
+    })
   }
-  const editor = briefSectionsFormRef.value?.getSectionEditor(sectionKey)
-  if (editor && pendingCapture.value) {
-    appendExcerpt(editor, pendingCapture.value.text, pendingCapture.value.source)
-  }
+}
+
+async function handleSelectBriefSection({ briefId, sectionKey }) {
+  await commitBriefCapture(briefId, sectionKey)
+  // Surface the brief we just added to.
+  activeBriefId.value = briefId
+  await notesStore.setActiveBriefForCourse(courseId.value, briefId)
+  closeMenu()
+}
+
+async function handleCreateBriefSection({ caseName, sectionKey }) {
+  const created = await notesStore.createAndSaveBrief({ courseId: courseId.value, caseName })
+  await commitBriefCapture(created.id, sectionKey)
+  activeBriefId.value = created.id // createAndSaveBrief already set it active server-side
   closeMenu()
 }
 
@@ -286,7 +310,6 @@ function formatDate(isoString) {
             <span v-if="newBriefErrors.caseName" class="field-error">{{ newBriefErrors.caseName }}</span>
           </form>
 
-          <p v-if="captureMissingBriefMessage" class="warning">{{ captureMissingBriefMessage }}</p>
 
           <BriefSectionsForm
             v-if="activeBrief"
@@ -303,8 +326,10 @@ function formatDate(isoString) {
       v-if="pendingCapture"
       :position="menuPosition"
       :template-sections="templateSections"
+      :briefs="briefs"
       :can-highlight="!!pendingCapture.anchor"
-      @select-section="handleSelectSection"
+      @select-brief-section="handleSelectBriefSection"
+      @create-brief-section="handleCreateBriefSection"
       @select-outline="handleSelectOutline"
       @select-highlight="handleSelectHighlight"
       @close="closeMenu"

@@ -97,6 +97,58 @@ describe('useNotesStore', () => {
     ).toEqual(doc('The mill shaft broke.'))
   })
 
+  it('appendToBriefSection appends to a section and persists just that section', async () => {
+    const store = await loadNotesStore()
+    const brief = await store.createAndSaveBrief({ courseId: 'contracts', caseName: 'Hadley' })
+
+    await store.appendToBriefSection({
+      briefId: brief.id,
+      sectionKey: 'facts',
+      nodes: [{ type: 'paragraph', content: [{ type: 'text', text: 'the holding text' }] }],
+    })
+
+    expect(JSON.stringify(store.getBriefById(brief.id).sections.facts)).toContain('the holding text')
+    const row = supabaseMock.db.brief_sections.find(
+      (r) => r.brief_id === brief.id && r.template_section_id === 'sec-facts',
+    )
+    expect(row).toBeTruthy()
+    expect(JSON.stringify(row.content)).toContain('the holding text')
+  })
+
+  it('appendToBriefSection appends without overwriting existing content', async () => {
+    const store = await loadNotesStore()
+    const brief = await store.createAndSaveBrief({ courseId: 'contracts', caseName: 'Hadley' })
+
+    await store.appendToBriefSection({
+      briefId: brief.id,
+      sectionKey: 'facts',
+      nodes: [{ type: 'paragraph', content: [{ type: 'text', text: 'first' }] }],
+    })
+    await store.appendToBriefSection({
+      briefId: brief.id,
+      sectionKey: 'facts',
+      nodes: [{ type: 'paragraph', content: [{ type: 'text', text: 'second' }] }],
+    })
+
+    const dump = JSON.stringify(store.getBriefById(brief.id).sections.facts)
+    expect(dump).toContain('first')
+    expect(dump).toContain('second')
+    // upsert keeps a single row for the section
+    expect(
+      supabaseMock.db.brief_sections.filter(
+        (r) => r.brief_id === brief.id && r.template_section_id === 'sec-facts',
+      ),
+    ).toHaveLength(1)
+  })
+
+  it('appendToBriefSection throws on an unknown section key', async () => {
+    const store = await loadNotesStore()
+    const brief = await store.createAndSaveBrief({ courseId: 'contracts', caseName: 'Hadley' })
+    await expect(
+      store.appendToBriefSection({ briefId: brief.id, sectionKey: 'nope', nodes: [] }),
+    ).rejects.toThrow(/unknown brief section/i)
+  })
+
   it('seed courses start with an empty outline', async () => {
     const store = await loadNotesStore()
     expect(store.getCourseById('contracts').outline).toEqual(EMPTY_DOC)
