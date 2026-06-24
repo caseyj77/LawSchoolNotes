@@ -233,3 +233,21 @@ onBeforeUnmount(() => {
   color: var(--color-error);
 }
 </style>
+
+<style>
+/* Unscoped: pdf.js's TextLayer inserts <span> elements directly at
+   runtime (not via Vue's template), so Vue's scoped-style data-v
+   attribute rewriting can never match them — a scoped rule here would
+   silently never apply. pdf_viewer.css sets `.textLayer ::selection`
+   to transparent by design (its full viewer substitutes a custom
+   highlight layer we don't use), so restore a visible highlight,
+   matching that selector's specificity via the extra .pdf-viewer
+   ancestor class so it reliably wins regardless of CSS load order. */
+.pdf-viewer .textLayer ::selection {
+  background: rgba(0, 100, 255, 0.35);
+}
+
+.pdf-viewer .textLayer ::-moz-selection {
+  background: rgba(0, 100, 255, 0.35);
+}
+</style>
