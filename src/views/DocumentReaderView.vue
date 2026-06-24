@@ -11,12 +11,14 @@ import PdfViewer from '@/components/PdfViewer.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import { appendExcerpt } from '@/lib/excerptHtml'
 import { newBriefCaptureSchema } from '@/schemas/newBriefCaptureSchema'
+import { useAnnotationsStore } from '@/stores/annotationsStore'
 import { useDocumentsStore } from '@/stores/documentsStore'
 import { useNotesStore } from '@/stores/notesStore'
 
 const route = useRoute()
 const notesStore = useNotesStore()
 const documentsStore = useDocumentsStore()
+const annotationsStore = useAnnotationsStore()
 
 const courseId = computed(() => route.params.courseId)
 const course = computed(() => notesStore.getCourseById(courseId.value))
@@ -63,6 +65,9 @@ async function openDocument(doc, page = 1) {
   activeDocumentId.value = doc.id
   initialPage.value = page
   activeDocumentData.value = await documentsStore.downloadDocument(doc.storagePath)
+  // Phase 0: load this document's annotations into the store on open. Nothing
+  // renders them yet (Phase 1) — this just proves the fetch/RLS path end-to-end.
+  await annotationsStore.fetchAnnotations(doc.id)
 }
 
 async function handleUpload(event) {
