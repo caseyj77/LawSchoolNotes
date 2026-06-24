@@ -22,7 +22,7 @@ onMounted(async () => {
     ? await notesStore.fetchBriefById(route.params.briefId)
     : null
 
-  Object.assign(brief, existing ?? (await notesStore.createBlankBrief(route.params.classId)))
+  Object.assign(brief, existing ?? (await notesStore.createBlankBrief(route.params.courseId)))
   templateSections.value = sections
   isLoading.value = false
 })
@@ -45,7 +45,7 @@ async function handleSave() {
   errors.value = {}
 
   const saved = await notesStore.saveCaseBrief(brief)
-  router.push(`/class/${saved.classId}`)
+  router.push(`/course/${saved.courseId}`)
 }
 </script>
 

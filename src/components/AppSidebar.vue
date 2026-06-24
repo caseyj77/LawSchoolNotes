@@ -64,7 +64,7 @@ function initials(email) {
               stroke-linejoin="round"
             />
           </svg>
-          Classes
+          Courses
         </RouterLink>
 
         <RouterLink :to="{ name: 'tasks' }" class="nav-item" @click="closeSidebar">

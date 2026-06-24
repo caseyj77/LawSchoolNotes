@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth'
 const OUTLINE_PERSIST_DEBOUNCE_MS = 600
 const outlineDebounceTimers = new Map()
 
-const seedClasses = [
+const seedCourses = [
   {
     title: 'Contracts',
     focus: 'Formation, consideration, performance, and remedies.',
@@ -27,7 +27,7 @@ const seedClasses = [
   },
 ]
 
-function shapeClass(row) {
+function shapeCourse(row) {
   return {
     id: row.id,
     title: row.title,
@@ -48,7 +48,7 @@ function shapeBrief(row, sectionRows, templateSections) {
 
   return {
     id: row.id,
-    classId: row.class_id,
+    courseId: row.class_id,
     templateId: row.template_id,
     caseName: row.case_name,
     citation: row.citation,
@@ -60,7 +60,7 @@ function shapeBrief(row, sectionRows, templateSections) {
 
 export const useNotesStore = defineStore('notes', () => {
   const authStore = useAuthStore()
-  const classes = ref([])
+  const courses = ref([])
   const caseBriefs = ref([])
   const templateSections = ref([])
   const isLoading = ref(false)
@@ -72,7 +72,7 @@ export const useNotesStore = defineStore('notes', () => {
     return userId
   }
 
-  async function fetchClasses() {
+  async function fetchCourses() {
     isLoading.value = true
     error.value = null
     try {
@@ -87,14 +87,14 @@ export const useNotesStore = defineStore('notes', () => {
       if (data.length === 0) {
         const { data: seeded, error: seedError } = await supabase
           .from('classes')
-          .insert(seedClasses.map((cls) => ({ ...cls, id: crypto.randomUUID(), user_id: userId })))
+          .insert(seedCourses.map((course) => ({ ...course, id: crypto.randomUUID(), user_id: userId })))
           .select()
         if (seedError) throw seedError
-        classes.value = seeded.map(shapeClass)
+        courses.value = seeded.map(shapeCourse)
       } else {
-        classes.value = data.map(shapeClass)
+        courses.value = data.map(shapeCourse)
       }
-      return classes.value
+      return courses.value
     } catch (e) {
       error.value = e
       throw e
@@ -103,7 +103,7 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  async function addClass({ title, focus }) {
+  async function addCourse({ title, focus }) {
     const id = crypto.randomUUID()
     const { data, error: insertError } = await supabase
       .from('classes')
@@ -112,42 +112,42 @@ export const useNotesStore = defineStore('notes', () => {
       .single()
     if (insertError) throw insertError
 
-    const created = shapeClass(data)
-    classes.value.push(created)
+    const created = shapeCourse(data)
+    courses.value.push(created)
     return created
   }
 
-  function getClassById(id) {
-    return classes.value.find((cls) => cls.id === id)
+  function getCourseById(id) {
+    return courses.value.find((course) => course.id === id)
   }
 
   // Optimistic local mutate, persisted to Supabase on a debounce since this is
   // called on every keystroke via RichTextEditor's Tiptap onUpdate.
-  function updateOutline(classId, content) {
-    const cls = getClassById(classId)
-    if (!cls) return
-    cls.outline = content
-    scheduleOutlinePersist(classId)
+  function updateOutline(courseId, content) {
+    const course = getCourseById(courseId)
+    if (!course) return
+    course.outline = content
+    scheduleOutlinePersist(courseId)
   }
 
-  function scheduleOutlinePersist(classId) {
-    clearTimeout(outlineDebounceTimers.get(classId))
+  function scheduleOutlinePersist(courseId) {
+    clearTimeout(outlineDebounceTimers.get(courseId))
     outlineDebounceTimers.set(
-      classId,
+      courseId,
       setTimeout(() => {
-        outlineDebounceTimers.delete(classId)
-        persistOutline(classId)
+        outlineDebounceTimers.delete(courseId)
+        persistOutline(courseId)
       }, OUTLINE_PERSIST_DEBOUNCE_MS),
     )
   }
 
-  async function persistOutline(classId) {
-    const cls = getClassById(classId)
-    if (!cls) return
+  async function persistOutline(courseId) {
+    const course = getCourseById(courseId)
+    if (!course) return
     const { error: dbError } = await supabase
       .from('classes')
-      .update({ outline: cls.outline })
-      .eq('id', classId)
+      .update({ outline: course.outline })
+      .eq('id', courseId)
       .eq('user_id', getUserId())
     if (dbError) {
       error.value = dbError
@@ -155,17 +155,17 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  function getActiveBriefForClass(classId) {
-    return getClassById(classId)?.lastActiveBriefId ?? null
+  function getActiveBriefForCourse(courseId) {
+    return getCourseById(courseId)?.lastActiveBriefId ?? null
   }
 
-  async function setActiveBriefForClass(classId, briefId) {
-    const cls = getClassById(classId)
-    if (cls) cls.lastActiveBriefId = briefId
+  async function setActiveBriefForCourse(courseId, briefId) {
+    const course = getCourseById(courseId)
+    if (course) course.lastActiveBriefId = briefId
     const { error: dbError } = await supabase
       .from('classes')
       .update({ last_active_brief_id: briefId })
-      .eq('id', classId)
+      .eq('id', courseId)
       .eq('user_id', getUserId())
     if (dbError) {
       error.value = dbError
@@ -191,11 +191,11 @@ export const useNotesStore = defineStore('notes', () => {
     return caseBriefs.value.find((brief) => brief.id === id) ?? null
   }
 
-  function getBriefsForClass(classId) {
-    return caseBriefs.value.filter((brief) => brief.classId === classId)
+  function getBriefsForCourse(courseId) {
+    return caseBriefs.value.filter((brief) => brief.courseId === courseId)
   }
 
-  async function loadBriefsForClass(classId) {
+  async function loadBriefsForCourse(courseId) {
     isLoading.value = true
     error.value = null
     try {
@@ -205,7 +205,7 @@ export const useNotesStore = defineStore('notes', () => {
       const { data: briefRows, error: briefsError } = await supabase
         .from('case_briefs')
         .select('*')
-        .eq('class_id', classId)
+        .eq('class_id', courseId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
       if (briefsError) throw briefsError
@@ -222,7 +222,7 @@ export const useNotesStore = defineStore('notes', () => {
       }
 
       const loaded = briefRows.map((row) => shapeBrief(row, sectionRows, sections))
-      caseBriefs.value = [...caseBriefs.value.filter((brief) => brief.classId !== classId), ...loaded]
+      caseBriefs.value = [...caseBriefs.value.filter((brief) => brief.courseId !== courseId), ...loaded]
       return loaded
     } catch (e) {
       error.value = e
@@ -266,10 +266,10 @@ export const useNotesStore = defineStore('notes', () => {
     }
   }
 
-  async function createBlankBrief(classId) {
+  async function createBlankBrief(courseId) {
     const sections = await getTemplateSections()
     return {
-      classId,
+      courseId,
       templateId: DEFAULT_TEMPLATE_ID,
       caseName: '',
       citation: '',
@@ -289,7 +289,7 @@ export const useNotesStore = defineStore('notes', () => {
         .insert({
           user_id: userId,
           template_id: brief.templateId ?? DEFAULT_TEMPLATE_ID,
-          class_id: brief.classId,
+          class_id: brief.courseId,
           case_name: brief.caseName ?? '',
           citation: brief.citation ?? '',
           student_notes: brief.studentNotes ?? '',
@@ -325,19 +325,19 @@ export const useNotesStore = defineStore('notes', () => {
 
     const saved = { ...brief, id: briefId }
     caseBriefs.value = [...caseBriefs.value.filter((b) => b.id !== briefId), saved]
-    await setActiveBriefForClass(saved.classId, briefId)
+    await setActiveBriefForCourse(saved.courseId, briefId)
     return saved
   }
 
-  async function createAndSaveBrief({ classId, caseName }) {
-    const blank = await createBlankBrief(classId)
+  async function createAndSaveBrief({ courseId, caseName }) {
+    const blank = await createBlankBrief(courseId)
     blank.caseName = caseName
     return saveCaseBrief(blank)
   }
 
-  async function deleteClass(id) {
-    classes.value = classes.value.filter((cls) => cls.id !== id)
-    caseBriefs.value = caseBriefs.value.filter((brief) => brief.classId !== id)
+  async function deleteCourse(id) {
+    courses.value = courses.value.filter((course) => course.id !== id)
+    caseBriefs.value = caseBriefs.value.filter((brief) => brief.courseId !== id)
 
     const { error: deleteError } = await supabase
       .from('classes')
@@ -348,23 +348,23 @@ export const useNotesStore = defineStore('notes', () => {
   }
 
   return {
-    classes,
+    courses,
     caseBriefs,
     templateSections,
     isLoading,
     error,
-    fetchClasses,
-    addClass,
-    getClassById,
+    fetchCourses,
+    addCourse,
+    getCourseById,
     updateOutline,
     persistOutline,
-    getActiveBriefForClass,
-    setActiveBriefForClass,
-    deleteClass,
+    getActiveBriefForCourse,
+    setActiveBriefForCourse,
+    deleteCourse,
     getTemplateSections,
-    getBriefsForClass,
+    getBriefsForCourse,
     getBriefById,
-    loadBriefsForClass,
+    loadBriefsForCourse,
     fetchBriefById,
     saveCaseBrief,
     createBlankBrief,

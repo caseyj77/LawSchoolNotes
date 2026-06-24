@@ -19,7 +19,7 @@ const defaultTemplateSections = [
   { id: 'sec-conclusion', template_id: DEFAULT_TEMPLATE_ID, key: 'conclusion', label: 'Conclusion', placeholder: '', position: 5 },
 ]
 
-const defaultClasses = [
+const defaultCourses = [
   { id: 'contracts', user_id: TEST_USER_ID, title: 'Contracts', focus: '', outline: EMPTY_DOC, last_active_brief_id: null },
 ]
 
@@ -38,7 +38,7 @@ async function loadNotesStore() {
 
   const { useNotesStore } = await import('../notesStore')
   const store = useNotesStore()
-  await store.fetchClasses()
+  await store.fetchCourses()
   return store
 }
 
@@ -46,25 +46,25 @@ describe('useNotesStore', () => {
   beforeEach(() => {
     localStorage.clear()
     setActivePinia(createPinia())
-    supabaseMock = createSupabaseMock({ template_sections: defaultTemplateSections, classes: defaultClasses })
+    supabaseMock = createSupabaseMock({ template_sections: defaultTemplateSections, classes: defaultCourses })
   })
 
-  it('createAndSaveBrief generates an id, sets classId, and starts with blank sections', async () => {
+  it('createAndSaveBrief generates an id, sets courseId, and starts with blank sections', async () => {
     const store = await loadNotesStore()
-    const brief = await store.createAndSaveBrief({ classId: 'contracts', caseName: 'Hadley v. Baxendale' })
+    const brief = await store.createAndSaveBrief({ courseId: 'contracts', caseName: 'Hadley v. Baxendale' })
 
     expect(brief.id).toBeTruthy()
-    expect(brief.classId).toBe('contracts')
+    expect(brief.courseId).toBe('contracts')
     expect(brief.caseName).toBe('Hadley v. Baxendale')
     expect(brief.sections.facts).toEqual(EMPTY_DOC)
     expect(store.getBriefById(brief.id).caseName).toBe('Hadley v. Baxendale')
   })
 
-  it('createAndSaveBrief marks the new brief as the active brief for its class', async () => {
+  it('createAndSaveBrief marks the new brief as the active brief for its course', async () => {
     const store = await loadNotesStore()
-    const brief = await store.createAndSaveBrief({ classId: 'contracts', caseName: 'Hadley v. Baxendale' })
+    const brief = await store.createAndSaveBrief({ courseId: 'contracts', caseName: 'Hadley v. Baxendale' })
 
-    expect(store.getActiveBriefForClass('contracts')).toBe(brief.id)
+    expect(store.getActiveBriefForCourse('contracts')).toBe(brief.id)
   })
 
   it('saveCaseBrief updates the active brief for both new and existing briefs', async () => {
@@ -74,13 +74,13 @@ describe('useNotesStore', () => {
     brief.caseName = 'Palsgraf'
     const saved = await store.saveCaseBrief(brief)
 
-    expect(store.getActiveBriefForClass('contracts')).toBe(saved.id)
+    expect(store.getActiveBriefForCourse('contracts')).toBe(saved.id)
 
     saved.caseName = 'Palsgraf v. Long Island Railroad Co.'
     await store.saveCaseBrief(saved)
 
     expect(store.getBriefById(saved.id).caseName).toBe('Palsgraf v. Long Island Railroad Co.')
-    expect(store.getActiveBriefForClass('contracts')).toBe(saved.id)
+    expect(store.getActiveBriefForCourse('contracts')).toBe(saved.id)
   })
 
   it('saveCaseBrief persists section content keyed by template section', async () => {
@@ -97,21 +97,21 @@ describe('useNotesStore', () => {
     ).toEqual(doc('The mill shaft broke.'))
   })
 
-  it('seed classes start with an empty outline', async () => {
+  it('seed courses start with an empty outline', async () => {
     const store = await loadNotesStore()
-    expect(store.getClassById('contracts').outline).toEqual(EMPTY_DOC)
+    expect(store.getCourseById('contracts').outline).toEqual(EMPTY_DOC)
   })
 
-  it('updateOutline sets the outline content for an existing class', async () => {
+  it('updateOutline sets the outline content for an existing course', async () => {
     const store = await loadNotesStore()
     store.updateOutline('contracts', doc('Formation requires offer, acceptance, consideration.'))
 
-    expect(store.getClassById('contracts').outline).toEqual(
+    expect(store.getCourseById('contracts').outline).toEqual(
       doc('Formation requires offer, acceptance, consideration.'),
     )
   })
 
-  it('updateOutline does nothing for an unknown class id', async () => {
+  it('updateOutline does nothing for an unknown course id', async () => {
     const store = await loadNotesStore()
     expect(() => store.updateOutline('does-not-exist', doc('x'))).not.toThrow()
   })
@@ -125,34 +125,34 @@ describe('useNotesStore', () => {
 
       await vi.advanceTimersByTimeAsync(600)
 
-      const row = supabaseMock.db.classes.find((cls) => cls.id === 'contracts')
+      const row = supabaseMock.db.classes.find((course) => course.id === 'contracts')
       expect(row.outline).toEqual(doc('second'))
     } finally {
       vi.useRealTimers()
     }
   })
 
-  it('a new class created via addClass starts with an empty outline', async () => {
+  it('a new course created via addCourse starts with an empty outline', async () => {
     const store = await loadNotesStore()
-    const created = await store.addClass({ title: 'Evidence', focus: 'Relevance and hearsay.' })
+    const created = await store.addCourse({ title: 'Evidence', focus: 'Relevance and hearsay.' })
 
     expect(created.outline).toEqual(EMPTY_DOC)
-    expect(supabaseMock.db.classes.find((cls) => cls.id === created.id)).toBeTruthy()
+    expect(supabaseMock.db.classes.find((course) => course.id === created.id)).toBeTruthy()
   })
 
-  it('getActiveBriefForClass returns null when no brief has been set as active', async () => {
+  it('getActiveBriefForCourse returns null when no brief has been set as active', async () => {
     const store = await loadNotesStore()
-    expect(store.getActiveBriefForClass('contracts')).toBeNull()
+    expect(store.getActiveBriefForCourse('contracts')).toBeNull()
   })
 
-  it('deleteClass removes the class locally and from Supabase', async () => {
+  it('deleteCourse removes the course locally and from Supabase', async () => {
     const store = await loadNotesStore()
-    expect(store.getClassById('contracts')).toBeTruthy()
+    expect(store.getCourseById('contracts')).toBeTruthy()
 
-    await store.deleteClass('contracts')
+    await store.deleteCourse('contracts')
 
-    expect(store.getClassById('contracts')).toBeUndefined()
-    expect(supabaseMock.db.classes.find((cls) => cls.id === 'contracts')).toBeUndefined()
+    expect(store.getCourseById('contracts')).toBeUndefined()
+    expect(supabaseMock.db.classes.find((course) => course.id === 'contracts')).toBeUndefined()
     // The mock has no FK-cascade simulation, so case_briefs/brief_sections cascade
     // cleanup is only verified against the real database (see manual smoke test).
   })

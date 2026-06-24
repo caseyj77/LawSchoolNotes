@@ -47,8 +47,8 @@ async function waitFor(assertion, { timeout = 2000, interval = 20 } = {}) {
   }
 }
 
-// `path` may be a function of the seeded classes, since class ids are
-// generated fresh on every seed (see notesStore.fetchClasses) rather than
+// `path` may be a function of the seeded courses, since course ids are
+// generated fresh on every seed (see notesStore.fetchCourses) rather than
 // fixed literals.
 async function mountApp(path) {
   const router = createRouter({
@@ -58,9 +58,9 @@ async function mountApp(path) {
 
   const pinia = createPinia()
   useAuthStore(pinia).user = { id: TEST_USER_ID }
-  const classes = await useNotesStore(pinia).fetchClasses()
+  const courses = await useNotesStore(pinia).fetchCourses()
 
-  router.push(typeof path === 'function' ? path(classes) : path)
+  router.push(typeof path === 'function' ? path(courses) : path)
   await router.isReady()
 
   const wrapper = mount(App, {
@@ -73,8 +73,8 @@ async function mountApp(path) {
   return wrapper
 }
 
-function contractsClassId(classes) {
-  return classes.find((cls) => cls.title === 'Contracts').id
+function contractsCourseId(courses) {
+  return courses.find((course) => course.title === 'Contracts').id
 }
 
 describe('LawSchoolNotes app', () => {
@@ -91,30 +91,30 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('Civil Procedure')
   })
 
-  it('adds a new class from the home route and links to it', async () => {
+  it('adds a new course from the home route and links to it', async () => {
     const wrapper = await mountApp('/')
 
-    await wrapper.get('input[placeholder="Class name"]').setValue('Evidence')
+    await wrapper.get('input[placeholder="Course name"]').setValue('Evidence')
     await wrapper.get('input[placeholder="Focus (optional)"]').setValue('Relevance and hearsay.')
-    await wrapper.get('.new-class-form').trigger('submit')
+    await wrapper.get('.new-course-form').trigger('submit')
     // VeeValidate's schema validation resolves over a few more microtask hops
     // than a single flushPromises() flush covers.
     await waitFor(() => expect(wrapper.text()).toContain('Evidence'))
-    expect(wrapper.find('a[href*="/class/"]').exists()).toBe(true)
+    expect(wrapper.find('a[href*="/course/"]').exists()).toBe(true)
   })
 
-  it('creates a case brief with a citation and student notes from the class view', async () => {
-    let classId
-    const wrapper = await mountApp((classes) => {
-      classId = contractsClassId(classes)
-      return `/class/${classId}`
+  it('creates a case brief with a citation and student notes from the course view', async () => {
+    let courseId
+    const wrapper = await mountApp((courses) => {
+      courseId = contractsCourseId(courses)
+      return `/course/${courseId}`
     })
 
     expect(wrapper.text()).toContain('Contracts')
     expect(wrapper.text()).toContain('No outline yet')
     expect(wrapper.text()).toContain('No case briefs yet')
 
-    await wrapper.get(`a[href="/class/${classId}/case-briefs/new"]`).trigger('click')
+    await wrapper.get(`a[href="/course/${courseId}/case-briefs/new"]`).trigger('click')
     await waitFor(() => expect(wrapper.text()).toContain('Case brief builder'))
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
     await wrapper.get('#citation').setValue('9 Ex. 341 (1854)')
@@ -133,10 +133,10 @@ describe('LawSchoolNotes app', () => {
     expect(wrapper.text()).toContain('9 Ex. 341 (1854)')
   })
 
-  it('deletes a class and its case briefs after confirmation', async () => {
+  it('deletes a course and its case briefs after confirmation', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
 
-    const wrapper = await mountApp((classes) => `/class/${contractsClassId(classes)}/case-briefs/new`)
+    const wrapper = await mountApp((courses) => `/course/${contractsCourseId(courses)}/case-briefs/new`)
     await wrapper.get('#case-name').setValue('Hadley v. Baxendale')
     await wrapper.get('.save-button').trigger('click')
     await flushPromises()

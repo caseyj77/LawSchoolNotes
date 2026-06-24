@@ -9,52 +9,52 @@ const route = useRoute()
 const router = useRouter()
 const notesStore = useNotesStore()
 
-const classId = computed(() => route.params.classId)
-const cls = computed(() => notesStore.getClassById(classId.value))
-const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
+const courseId = computed(() => route.params.courseId)
+const course = computed(() => notesStore.getCourseById(courseId.value))
+const briefs = computed(() => notesStore.getBriefsForCourse(courseId.value))
 const isLoading = ref(true)
 
 onMounted(async () => {
-  await notesStore.loadBriefsForClass(classId.value)
+  await notesStore.loadBriefsForCourse(courseId.value)
   isLoading.value = false
 })
 
-async function handleDeleteClass() {
+async function handleDeleteCourse() {
   const count = briefs.value.length
   const message =
     count > 0
-      ? `Delete "${cls.value.title}" and its ${count} case brief${count === 1 ? '' : 's'}?`
-      : `Delete "${cls.value.title}"?`
+      ? `Delete "${course.value.title}" and its ${count} case brief${count === 1 ? '' : 's'}?`
+      : `Delete "${course.value.title}"?`
   if (!window.confirm(message)) return
-  await notesStore.deleteClass(classId.value)
+  await notesStore.deleteCourse(courseId.value)
   router.push({ name: 'course-outlines' })
 }
 </script>
 
 <template>
-  <section v-if="cls" class="content-grid">
+  <section v-if="course" class="content-grid">
     <article class="panel panel-wide">
       <div class="panel-header">
         <div>
-          <p class="label">Class</p>
-          <h2>{{ cls.title }}</h2>
+          <p class="label">Course</p>
+          <h2>{{ course.title }}</h2>
         </div>
-        <p class="supporting-copy">{{ cls.focus }}</p>
-        <button type="button" class="danger" @click="handleDeleteClass">Delete class</button>
+        <p class="supporting-copy">{{ course.focus }}</p>
+        <button type="button" class="danger" @click="handleDeleteCourse">Delete course</button>
       </div>
     </article>
 
     <article class="panel">
       <p class="label">Outline</p>
-      <p v-if="!isJsonDocEmpty(cls.outline)" class="supporting-copy outline-preview" v-html="renderRichTextToHtml(cls.outline)"></p>
+      <p v-if="!isJsonDocEmpty(course.outline)" class="supporting-copy outline-preview" v-html="renderRichTextToHtml(course.outline)"></p>
       <p v-else class="supporting-copy">No outline yet.</p>
-      <RouterLink :to="`/class/${classId}/outline`">Open outline builder</RouterLink>
+      <RouterLink :to="`/course/${courseId}/outline`">Open outline builder</RouterLink>
     </article>
 
     <article class="panel">
       <p class="label">Document reader</p>
       <p class="supporting-copy">Read a case and build your brief side by side.</p>
-      <RouterLink :to="`/class/${classId}/reader`">Open document reader</RouterLink>
+      <RouterLink :to="`/course/${courseId}/reader`">Open document reader</RouterLink>
     </article>
 
     <article class="panel">
@@ -62,14 +62,14 @@ async function handleDeleteClass() {
       <p v-if="isLoading" class="supporting-copy">Loading case briefs…</p>
       <ul v-else-if="briefs.length" class="brief-list">
         <li v-for="brief in briefs" :key="brief.id">
-          <RouterLink :to="`/class/${classId}/case-briefs/${brief.id}`">
+          <RouterLink :to="`/course/${courseId}/case-briefs/${brief.id}`">
             {{ brief.caseName || 'Untitled case brief' }}
             <span v-if="brief.citation" class="citation">{{ brief.citation }}</span>
           </RouterLink>
         </li>
       </ul>
       <p v-else class="supporting-copy">No case briefs yet.</p>
-      <RouterLink :to="`/class/${classId}/case-briefs/new`">Add case brief</RouterLink>
+      <RouterLink :to="`/course/${courseId}/case-briefs/new`">Add case brief</RouterLink>
     </article>
   </section>
 </template>

@@ -3,23 +3,23 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { onMounted } from 'vue'
 import { useForm } from 'vee-validate'
 
-import { classSchema } from '@/schemas/classSchema'
+import { courseSchema } from '@/schemas/courseSchema'
 import { useNotesStore } from '@/stores/notesStore'
 
 const notesStore = useNotesStore()
 
 const { defineField, errors, handleSubmit, resetForm } = useForm({
-  validationSchema: toTypedSchema(classSchema),
+  validationSchema: toTypedSchema(courseSchema),
 })
 const [newTitle] = defineField('title')
 const [newFocus] = defineField('focus')
 
 onMounted(() => {
-  notesStore.fetchClasses()
+  notesStore.fetchCourses()
 })
 
-const handleAddClass = handleSubmit(async (values) => {
-  await notesStore.addClass(values)
+const handleAddCourse = handleSubmit(async (values) => {
+  await notesStore.addCourse(values)
   resetForm()
 })
 </script>
@@ -30,7 +30,7 @@ const handleAddClass = handleSubmit(async (values) => {
       <div class="panel-header">
         <div>
           <p class="label">Course outlines</p>
-          <h2>Track your materials by class.</h2>
+          <h2>Track your materials by course.</h2>
         </div>
         <p class="supporting-copy">
           Keep each course anchored around the rules, cases, and exam prep resources you revisit
@@ -40,22 +40,22 @@ const handleAddClass = handleSubmit(async (values) => {
 
       <div class="outline-list">
         <RouterLink
-          v-for="cls in notesStore.classes"
-          :key="cls.id"
-          :to="`/class/${cls.id}`"
+          v-for="course in notesStore.courses"
+          :key="course.id"
+          :to="`/course/${course.id}`"
           class="outline-card"
         >
-          <h3>{{ cls.title }}</h3>
-          <p>{{ cls.focus }}</p>
+          <h3>{{ course.title }}</h3>
+          <p>{{ course.focus }}</p>
         </RouterLink>
       </div>
 
-      <form class="new-class-form" @submit.prevent="handleAddClass">
-        <p class="label">New class</p>
-        <div class="new-class-fields">
-          <input v-model.trim="newTitle" type="text" placeholder="Class name">
+      <form class="new-course-form" @submit.prevent="handleAddCourse">
+        <p class="label">New course</p>
+        <div class="new-course-fields">
+          <input v-model.trim="newTitle" type="text" placeholder="Course name">
           <input v-model.trim="newFocus" type="text" placeholder="Focus (optional)">
-          <button type="submit">Add class</button>
+          <button type="submit">Add course</button>
         </div>
         <span v-if="errors.title" class="field-error">{{ errors.title }}</span>
       </form>
@@ -136,18 +136,18 @@ h2 {
   line-height: 1.6;
 }
 
-.new-class-form {
+.new-course-form {
   border-top: 1px solid var(--color-border);
   padding-top: 1.25rem;
 }
 
-.new-class-fields {
+.new-course-fields {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
 
-.new-class-fields input {
+.new-course-fields input {
   flex: 1;
   min-width: 10rem;
   padding: 0.7rem 0.9rem;
@@ -157,7 +157,7 @@ h2 {
   background: var(--color-surface-alt);
 }
 
-.new-class-fields button {
+.new-course-fields button {
   padding: 0.7rem 1.2rem;
   border: 1px solid var(--color-active-border);
   border-radius: 0.9rem;

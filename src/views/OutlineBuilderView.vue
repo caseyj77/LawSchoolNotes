@@ -8,19 +8,19 @@ import { useNotesStore } from '@/stores/notesStore'
 const route = useRoute()
 const notesStore = useNotesStore()
 
-const cls = computed(() => notesStore.getClassById(route.params.classId))
+const course = computed(() => notesStore.getCourseById(route.params.courseId))
 
 const outlineContent = computed({
-  get: () => cls.value?.outline ?? { type: 'doc', content: [] },
-  set: (value) => notesStore.updateOutline(route.params.classId, value),
+  get: () => course.value?.outline ?? { type: 'doc', content: [] },
+  set: (value) => notesStore.updateOutline(route.params.courseId, value),
 })
 </script>
 
 <template>
-  <section v-if="cls" class="content-grid">
+  <section v-if="course" class="content-grid">
     <article class="panel">
       <p class="label">Outline builder</p>
-      <h2>{{ cls.title }}</h2>
+      <h2>{{ course.title }}</h2>
       <p class="supporting-copy">
         Build your outline here, or capture excerpts into it from the document reader.
       </p>
@@ -31,7 +31,7 @@ const outlineContent = computed({
         placeholder="Start building your outline…"
       />
 
-      <RouterLink :to="`/class/${cls.id}`" class="back-link">← Back to class</RouterLink>
+      <RouterLink :to="`/course/${course.id}`" class="back-link">← Back to course</RouterLink>
     </article>
   </section>
 </template>

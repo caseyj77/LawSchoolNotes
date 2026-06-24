@@ -16,13 +16,13 @@ import { useNotesStore } from '@/stores/notesStore'
 const route = useRoute()
 const notesStore = useNotesStore()
 
-const classId = computed(() => route.params.classId)
-const cls = computed(() => notesStore.getClassById(classId.value))
-const briefs = computed(() => notesStore.getBriefsForClass(classId.value))
+const courseId = computed(() => route.params.courseId)
+const course = computed(() => notesStore.getCourseById(courseId.value))
+const briefs = computed(() => notesStore.getBriefsForCourse(courseId.value))
 
 const outlineContent = computed({
-  get: () => cls.value?.outline ?? { type: 'doc', content: [] },
-  set: (value) => notesStore.updateOutline(classId.value, value),
+  get: () => course.value?.outline ?? { type: 'doc', content: [] },
+  set: (value) => notesStore.updateOutline(courseId.value, value),
 })
 
 const isLoading = ref(true)
@@ -51,9 +51,9 @@ const menuPosition = ref(null)
 
 onMounted(async () => {
   templateSections.value = await notesStore.getTemplateSections()
-  await notesStore.loadBriefsForClass(classId.value)
+  await notesStore.loadBriefsForCourse(courseId.value)
 
-  const lastActiveId = notesStore.getActiveBriefForClass(classId.value)
+  const lastActiveId = notesStore.getActiveBriefForCourse(courseId.value)
   const stillExists = lastActiveId && notesStore.getBriefById(lastActiveId)
   activeBriefId.value = stillExists ? lastActiveId : briefs.value[0]?.id ?? null
   isLoading.value = false
@@ -66,11 +66,11 @@ async function handleSelectChange(event) {
     return
   }
   activeBriefId.value = value
-  await notesStore.setActiveBriefForClass(classId.value, value)
+  await notesStore.setActiveBriefForCourse(courseId.value, value)
 }
 
 const handleCreateBrief = handleNewBriefSubmit(async (values) => {
-  const created = await notesStore.createAndSaveBrief({ classId: classId.value, caseName: values.caseName })
+  const created = await notesStore.createAndSaveBrief({ courseId: courseId.value, caseName: values.caseName })
   activeBriefId.value = created.id
   resetNewBriefForm()
   isCreatingBrief.value = false
@@ -114,11 +114,11 @@ function handleSelectOutline() {
     <p>Loading document reader…</p>
   </section>
 
-  <section v-else-if="cls" class="content-grid">
+  <section v-else-if="course" class="content-grid">
     <header class="reader-header">
       <p class="label">Document reader</p>
-      <h2>{{ cls.title }}</h2>
-      <RouterLink :to="`/class/${classId}`" class="back-link">← Back to class</RouterLink>
+      <h2>{{ course.title }}</h2>
+      <RouterLink :to="`/course/${courseId}`" class="back-link">← Back to course</RouterLink>
     </header>
 
     <div class="reader-layout">
@@ -180,7 +180,7 @@ function handleSelectOutline() {
             :brief="activeBrief"
             :template-sections="templateSections"
           />
-          <p v-else class="supporting-copy">No brief selected for this class yet.</p>
+          <p v-else class="supporting-copy">No brief selected for this course yet.</p>
         </article>
       </div>
     </div>
@@ -197,8 +197,8 @@ function handleSelectOutline() {
 
   <section v-else class="content-grid">
     <article class="panel">
-      <p>Class not found.</p>
-      <RouterLink :to="{ name: 'course-outlines' }">← All classes</RouterLink>
+      <p>Course not found.</p>
+      <RouterLink :to="{ name: 'course-outlines' }">← All courses</RouterLink>
     </article>
   </section>
 </template>
