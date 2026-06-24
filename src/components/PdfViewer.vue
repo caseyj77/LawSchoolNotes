@@ -38,7 +38,17 @@ async function loadDocument(buffer) {
 
   isLoading.value = true
   try {
-    const doc = await getDocument({ data: buffer.slice(0) }).promise
+    const doc = await getDocument({
+      data: buffer.slice(0),
+      // Without these, pdf.js can't substitute non-embedded standard fonts
+      // or decode CID character maps used by many real-world PDFs (common
+      // in exports from legal databases) — text still *renders* via canvas
+      // fallback glyphs, but the text-layer's glyph metrics silently don't
+      // match, leaving drag-to-select non-functional on affected documents.
+      standardFontDataUrl: '/standard_fonts/',
+      cMapUrl: '/cmaps/',
+      cMapPacked: true,
+    }).promise
     pdfDoc.value = doc
     pageCount.value = doc.numPages
     currentPage.value = Math.min(Math.max(props.initialPage, 1), doc.numPages)
