@@ -109,9 +109,48 @@ describe('annotationsStore', () => {
     expect(store.isLoading).toBe(false)
   })
 
-  it('guards Phase 1+ mutations until they are implemented', () => {
+  it('creates a highlight, persisting it and adding it to byDocument', async () => {
     const store = useAnnotationsStore()
-    expect(() => store.create()).toThrow(/not implemented/i)
+    await store.fetchAnnotations(DOC_A)
+
+    const created = await store.create({
+      documentId: DOC_A,
+      sourceType: 'pdf',
+      kind: 'highlight',
+      color: 'yellow',
+      pageIndex: 1,
+      anchor: { rects: [{ x: 0.1, y: 0.2, w: 0.3, h: 0.02 }] },
+      quote: 'a new highlight',
+    })
+
+    expect(created.id).toBeDefined()
+    expect(created).toMatchObject({ documentId: DOC_A, sourceType: 'pdf', pageIndex: 1, quote: 'a new highlight' })
+    // appended to the in-memory list...
+    expect(store.byDocument[DOC_A].map((a) => a.quote)).toContain('a new highlight')
+    // ...and written through to the (mock) database, scoped to the user
+    expect(supabaseMock.db.annotations.find((row) => row.quote === 'a new highlight')).toMatchObject({
+      user_id: TEST_USER_ID,
+      document_id: DOC_A,
+      source_type: 'pdf',
+    })
+  })
+
+  it('creates into a fresh byDocument bucket when none was fetched first', async () => {
+    const store = useAnnotationsStore()
+
+    await store.create({
+      documentId: 'doc-new',
+      sourceType: 'pdf',
+      pageIndex: 0,
+      anchor: { rects: [] },
+      quote: 'first on this doc',
+    })
+
+    expect(store.byDocument['doc-new']).toHaveLength(1)
+  })
+
+  it('guards still-unimplemented mutations', () => {
+    const store = useAnnotationsStore()
     expect(() => store.update()).toThrow(/not implemented/i)
     expect(() => store.remove()).toThrow(/not implemented/i)
   })

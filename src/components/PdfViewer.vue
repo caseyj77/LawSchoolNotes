@@ -4,6 +4,8 @@ import { GlobalWorkerOptions, TextLayer, getDocument } from 'pdfjs-dist/legacy/b
 import PdfWorker from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'
 import 'pdfjs-dist/legacy/web/pdf_viewer.css'
 
+import { annotationColorRgba } from '@/lib/annotationColors'
+
 GlobalWorkerOptions.workerSrc = PdfWorker
 
 const RESIZE_DEBOUNCE_MS = 150
@@ -19,11 +21,15 @@ const props = defineProps({
   data: { type: ArrayBuffer, default: null },
   filename: { type: String, default: '' },
   initialPage: { type: Number, default: 1 },
+  // Annotations for the open document; PDF highlights are rendered as overlay
+  // divs positioned from their normalized rects on every (re)render.
+  annotations: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['capture'])
 
 const canvasShellRef = ref(null)
 const canvasRef = ref(null)
+const highlightLayerRef = ref(null)
 const textLayerRef = ref(null)
 const pdfDoc = shallowRef(null)
 const currentPage = ref(1)
@@ -35,6 +41,9 @@ const zoomScale = ref(null)
 // The actual scale used for the most recent render, so the zoom % readout and
 // the zoom-in/out steps work off what's really on screen (incl. auto-fit).
 const renderedScale = ref(1)
+// Rendered page size (CSS px) of the most recent render, used to lay out
+// highlight overlays without re-rendering the canvas.
+const renderedSize = ref({ width: 0, height: 0 })
 
 const zoomPercent = computed(() => `${Math.round(renderedScale.value * 100)}%`)
 
@@ -129,6 +138,68 @@ async function renderPage(pageNumber) {
     viewport,
   })
   await textLayer.render()
+
+  // Remember the page's rendered CSS size so highlight overlays can be
+  // re-laid-out (on annotation changes) without re-rendering the canvas.
+  renderedSize.value = { width: viewport.width, height: viewport.height }
+  renderHighlights()
+}
+
+const clamp01 = (value) => Math.min(Math.max(value, 0), 1)
+
+// Convert the current selection into rects expressed as fractions of the
+// rendered page, so they re-anchor correctly at any zoom. Coordinates are taken
+// relative to the canvas (the page origin) and divided by its rendered size.
+function computeSelectionRects(selection) {
+  const canvas = canvasRef.value
+  if (!canvas || !selection || selection.rangeCount === 0) return []
+  const base = canvas.getBoundingClientRect()
+  if (!base.width || !base.height) return []
+
+  const rects = []
+  for (let i = 0; i < selection.rangeCount; i += 1) {
+    for (const r of selection.getRangeAt(i).getClientRects()) {
+      if (!r.width || !r.height) continue
+      rects.push({
+        x: clamp01((r.left - base.left) / base.width),
+        y: clamp01((r.top - base.top) / base.height),
+        w: clamp01(r.width / base.width),
+        h: clamp01(r.height / base.height),
+      })
+    }
+  }
+  return rects
+}
+
+// Paint overlay divs for this page's highlights. Child divs are created
+// imperatively (not in the Vue template), so — like pdf.js's text-layer spans —
+// scoped CSS can't reach them; their box styles are set inline instead.
+function renderHighlights() {
+  const layer = highlightLayerRef.value
+  if (!layer) return
+
+  const { width, height } = renderedSize.value
+  layer.style.width = `${width}px`
+  layer.style.height = `${height}px`
+  layer.innerHTML = ''
+  if (!width || !height) return
+
+  const pageZeroIndex = currentPage.value - 1
+  for (const annotation of props.annotations) {
+    if (annotation.sourceType !== 'pdf' || annotation.pageIndex !== pageZeroIndex) continue
+    for (const rect of annotation.anchor?.rects ?? []) {
+      const div = document.createElement('div')
+      div.style.position = 'absolute'
+      div.style.borderRadius = '2px'
+      div.style.pointerEvents = 'none'
+      div.style.left = `${rect.x * width}px`
+      div.style.top = `${rect.y * height}px`
+      div.style.width = `${rect.w * width}px`
+      div.style.height = `${rect.h * height}px`
+      div.style.background = annotationColorRgba(annotation.color)
+      layer.appendChild(div)
+    }
+  }
 }
 
 async function goToPage(delta) {
@@ -163,13 +234,18 @@ async function resetZoom() {
 }
 
 function handleContextMenu(event) {
-  const text = window.getSelection()?.toString().trim()
+  const selection = window.getSelection()
+  const text = selection?.toString().trim()
   if (!text) return
 
   event.preventDefault()
+  const rects = computeSelectionRects(selection)
   emit('capture', {
     text,
     source: { filename: props.filename, page: currentPage.value },
+    // Anchor data for creating a highlight (null if geometry couldn't be read).
+    anchor: rects.length ? { rects } : null,
+    pageIndex: currentPage.value - 1,
     position: { x: event.clientX, y: event.clientY },
   })
 }
@@ -179,6 +255,16 @@ watch(
   (buffer) => {
     loadDocument(buffer)
   },
+)
+
+// Repaint overlays when the document's annotations change (e.g. a new highlight
+// was created) without re-rendering the canvas.
+watch(
+  () => props.annotations,
+  () => {
+    if (pdfDoc.value) renderHighlights()
+  },
+  { deep: true },
 )
 
 onMounted(() => {
@@ -237,6 +323,7 @@ onBeforeUnmount(() => {
     <div ref="canvasShellRef" v-show="pdfDoc" class="canvas-shell" @contextmenu="handleContextMenu">
       <div class="page-stack">
         <canvas ref="canvasRef"></canvas>
+        <div ref="highlightLayerRef" class="highlight-layer"></div>
         <div ref="textLayerRef" class="textLayer"></div>
       </div>
     </div>
@@ -306,6 +393,17 @@ onBeforeUnmount(() => {
 
 .page-stack canvas {
   display: block;
+}
+
+/* Sits above the canvas but below the (transparent) text layer, so highlights
+   tint the rendered glyphs while text stays selectable. Non-interactive in
+   Phase 1 — clicking a highlight comes later. */
+.highlight-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .status,

@@ -4,9 +4,12 @@ import { ref } from 'vue'
 const props = defineProps({
   position: { type: Object, required: true },
   templateSections: { type: Array, required: true },
+  // Whether the current selection carries anchor geometry (PDF) so it can be
+  // turned into a persisted highlight.
+  canHighlight: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['select-section', 'select-outline', 'close'])
+const emit = defineEmits(['select-section', 'select-outline', 'select-highlight', 'close'])
 
 const briefExpanded = ref(false)
 </script>
@@ -17,6 +20,15 @@ const briefExpanded = ref(false)
     :style="{ left: `${position.x}px`, top: `${position.y}px` }"
     @contextmenu.prevent
   >
+    <button
+      v-if="props.canHighlight"
+      type="button"
+      class="menu-item"
+      @click="emit('select-highlight')"
+    >
+      Highlight
+    </button>
+
     <button type="button" class="menu-item" @click="briefExpanded = !briefExpanded">
       Add to Case Brief
     </button>

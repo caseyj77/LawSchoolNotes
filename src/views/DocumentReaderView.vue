@@ -9,6 +9,7 @@ import CaptureMenu from '@/components/CaptureMenu.vue'
 import DocxViewer from '@/components/DocxViewer.vue'
 import PdfViewer from '@/components/PdfViewer.vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
+import { DEFAULT_ANNOTATION_COLOR } from '@/lib/annotationColors'
 import { appendExcerpt } from '@/lib/excerptHtml'
 import { newBriefCaptureSchema } from '@/schemas/newBriefCaptureSchema'
 import { useAnnotationsStore } from '@/stores/annotationsStore'
@@ -43,6 +44,9 @@ const activeDocumentId = ref(null)
 const activeDocumentData = ref(null)
 const activeDocument = computed(() =>
   documentsStore.documents.find((doc) => doc.id === activeDocumentId.value) ?? null,
+)
+const activeAnnotations = computed(() =>
+  activeDocumentId.value ? annotationsStore.byDocument[activeDocumentId.value] ?? [] : [],
 )
 const initialPage = ref(1)
 const isUploading = ref(false)
@@ -136,12 +140,12 @@ const handleCreateBrief = handleNewBriefSubmit(async (values) => {
   isCreatingBrief.value = false
 })
 
-function handleCapture({ text, source, position }) {
+function handleCapture({ text, source, anchor = null, pageIndex = null, position }) {
   captureMissingBriefMessage.value = ''
   const enrichedSource = activeDocument.value
     ? { ...source, courseId: courseId.value, documentId: activeDocument.value.id }
     : source
-  pendingCapture.value = { text, source: enrichedSource }
+  pendingCapture.value = { text, source: enrichedSource, anchor, pageIndex }
   menuPosition.value = position
 }
 
@@ -167,6 +171,22 @@ function handleSelectOutline() {
   const editor = outlineEditorRef.value?.editor
   if (editor && pendingCapture.value) {
     appendExcerpt(editor, pendingCapture.value.text, pendingCapture.value.source)
+  }
+  closeMenu()
+}
+
+async function handleSelectHighlight() {
+  const capture = pendingCapture.value
+  if (capture?.anchor && activeDocument.value) {
+    await annotationsStore.create({
+      documentId: activeDocument.value.id,
+      sourceType: 'pdf',
+      kind: 'highlight',
+      color: DEFAULT_ANNOTATION_COLOR,
+      pageIndex: capture.pageIndex,
+      anchor: capture.anchor,
+      quote: capture.text,
+    })
   }
   closeMenu()
 }
@@ -226,6 +246,7 @@ function formatDate(isoString) {
           :data="activeDocumentData"
           :filename="activeDocument.filename"
           :initial-page="initialPage"
+          :annotations="activeAnnotations"
           @capture="handleCapture"
         />
         <DocxViewer
@@ -282,8 +303,10 @@ function formatDate(isoString) {
       v-if="pendingCapture"
       :position="menuPosition"
       :template-sections="templateSections"
+      :can-highlight="!!pendingCapture.anchor"
       @select-section="handleSelectSection"
       @select-outline="handleSelectOutline"
+      @select-highlight="handleSelectHighlight"
       @close="closeMenu"
     />
   </section>
