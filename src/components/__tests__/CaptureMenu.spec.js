@@ -19,8 +19,13 @@ function mountMenu(props = {}) {
   })
 }
 
+// Match on substring so chevrons/labels in the button text don't break lookups.
 function byText(wrapper, selector, text) {
-  return wrapper.findAll(selector).find((node) => node.text() === text)
+  return wrapper.findAll(selector).find((node) => node.text().includes(text))
+}
+
+async function openBriefs(wrapper) {
+  await byText(wrapper, 'button.menu-item', 'Add to Case Brief').trigger('click')
 }
 
 describe('CaptureMenu', () => {
@@ -32,7 +37,7 @@ describe('CaptureMenu', () => {
 
   it('emits close when Cancel is clicked', async () => {
     const wrapper = mountMenu()
-    await wrapper.get('button.close').trigger('click')
+    await byText(wrapper, 'button.menu-item', 'Cancel').trigger('click')
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
@@ -49,9 +54,9 @@ describe('CaptureMenu', () => {
   it('chooses an existing brief then a section, emitting select-brief-section', async () => {
     const wrapper = mountMenu()
 
-    await byText(wrapper, 'button.menu-item', 'Add to Case Brief').trigger('click')
-    await byText(wrapper, '.submenu button', 'Hadley v. Baxendale').trigger('click')
-    await byText(wrapper, '.submenu-nested button', 'Holding').trigger('click')
+    await openBriefs(wrapper)
+    await byText(wrapper, 'button.brief-row', 'Hadley v. Baxendale').trigger('click')
+    await byText(wrapper, 'button.section-row', 'Holding').trigger('click')
 
     expect(wrapper.emitted('select-brief-section')).toEqual([
       [{ briefId: 'brief-1', sectionKey: 'holding' }],
@@ -60,36 +65,54 @@ describe('CaptureMenu', () => {
 
   it('shows an untitled label for a brief with no case name', async () => {
     const wrapper = mountMenu()
-    await byText(wrapper, 'button.menu-item', 'Add to Case Brief').trigger('click')
-    expect(byText(wrapper, '.submenu button', 'Untitled case brief')).toBeDefined()
+    await openBriefs(wrapper)
+    expect(byText(wrapper, 'button.brief-row', 'Untitled case brief')).toBeDefined()
   })
 
-  it('creates a new brief (name + section), emitting create-brief-section', async () => {
+  it('creates a new brief (name then section), emitting create-brief-section', async () => {
     const wrapper = mountMenu()
 
-    await byText(wrapper, 'button.menu-item', 'Add to Case Brief').trigger('click')
-    await byText(wrapper, '.submenu button', '+ New case brief').trigger('click')
+    await openBriefs(wrapper)
+    await byText(wrapper, 'button.new-brief', '+ New case brief').trigger('click')
     await wrapper.get('input.new-brief-input').setValue('Palsgraf')
-    await byText(wrapper, '.new-brief-panel .submenu-nested button', 'Facts').trigger('click')
+    await byText(wrapper, 'button.section-row', 'Facts').trigger('click')
 
     expect(wrapper.emitted('create-brief-section')).toEqual([
       [{ caseName: 'Palsgraf', sectionKey: 'facts' }],
     ])
   })
 
-  it('disables the new-brief section buttons until a case name is entered', async () => {
+  it('advances from the new-brief name to sections on Enter', async () => {
     const wrapper = mountMenu()
-    await byText(wrapper, 'button.menu-item', 'Add to Case Brief').trigger('click')
-    await byText(wrapper, '.submenu button', '+ New case brief').trigger('click')
 
-    const factsButton = byText(wrapper, '.new-brief-panel .submenu-nested button', 'Facts')
-    expect(factsButton.attributes('disabled')).toBeDefined()
+    await openBriefs(wrapper)
+    await byText(wrapper, 'button.new-brief', '+ New case brief').trigger('click')
+    const input = wrapper.get('input.new-brief-input')
+    await input.setValue('Palsgraf')
+    await input.trigger('keyup.enter')
+
+    // Now on the sections step.
+    await byText(wrapper, 'button.section-row', 'Facts').trigger('click')
+    expect(wrapper.emitted('create-brief-section')).toEqual([
+      [{ caseName: 'Palsgraf', sectionKey: 'facts' }],
+    ])
+  })
+
+  it('does not advance to sections when the new-brief name is blank', async () => {
+    const wrapper = mountMenu()
+    await openBriefs(wrapper)
+    await byText(wrapper, 'button.new-brief', '+ New case brief').trigger('click')
+
+    const next = byText(wrapper, 'button.new-brief-next', 'Next')
+    expect(next.attributes('disabled')).toBeDefined()
+    await next.trigger('click')
+    expect(byText(wrapper, 'button.section-row', 'Facts')).toBeUndefined()
   })
 
   it('renders only the sections provided by the template', async () => {
     const wrapper = mountMenu({ templateSections: [{ key: 'summary', label: 'Summary' }] })
-    await byText(wrapper, 'button.menu-item', 'Add to Case Brief').trigger('click')
-    await byText(wrapper, '.submenu button', 'Hadley v. Baxendale').trigger('click')
+    await openBriefs(wrapper)
+    await byText(wrapper, 'button.brief-row', 'Hadley v. Baxendale').trigger('click')
 
     expect(wrapper.text()).toContain('Summary')
     expect(wrapper.text()).not.toContain('Holding')
