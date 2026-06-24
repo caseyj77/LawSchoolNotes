@@ -1,6 +1,6 @@
 ---
 name: vue3-feature-libraries
-description: Use this skill whenever adding a calendar/scheduling view, a kanban or sprint-style task board, drag-and-drop reordering, data-entry forms (including date fields and validation), or rich text / large text editing fields to a Vue 3 app. Trigger this for phrases like "add a calendar," "build a kanban board," "add a task board," "create a form for X," "add validation," "add a date picker," "add a rich text editor," or "add a notes/description field" — even if the user doesn't name a library, since this skill defines the default choice for each. Companion to the vue3-app-builder skill, which covers project setup; this one covers feature-specific library choices on top of that setup.
+description: Use this skill whenever adding a calendar/scheduling view, a kanban or sprint-style task board, drag-and-drop reordering, data-entry forms (including date fields and validation), rich text / large text editing fields, or document/Word export to a Vue 3 app. Trigger this for phrases like "add a calendar," "build a kanban board," "add a task board," "create a form for X," "add validation," "add a date picker," "add a rich text editor," "add a notes/description field," "export to Word," "download as a document," or "make a printable/Word version" — even if the user doesn't name a library, since this skill defines the default choice for each. Companion to the vue3-app-builder skill, which covers project setup; this one covers feature-specific library choices on top of that setup.
 ---
 
 # Vue 3 Feature Libraries
@@ -81,6 +81,21 @@ npm install @tiptap/vue-3 @tiptap/pm @tiptap/starter-kit
   - For validation: a Tiptap field's "emptiness" isn't a plain empty string — check `editor.isEmpty` rather than checking if the JSON/HTML string is falsy, and reflect that in the Zod schema as a refinement rather than a plain `min(1)` string check.
 
 **Escalation path:** if a project needs real-time collaborative editing (multiple users editing the same document simultaneously), Tiptap supports this via its Collaboration extension (built on Yjs) — but that's a deliberate, heavier addition, not something to reach for unless multi-user editing is an actual requirement.
+
+## Document / Word Export
+
+When the user wants to export content (a case brief, report, notes page) as a Word document:
+
+**Default: generate Word-compatible HTML and download it as `.doc`** — no library needed.
+
+- Microsoft Word and Google Docs both open an HTML file with Office namespaces natively, preserving headings, bold, lists, and blockquotes. This avoids pulling in a heavyweight OOXML/`.docx` dependency just to hand the user a document.
+- **Reuse the app's existing render path** — do not write a second renderer. If the content is Tiptap JSON, run it through the same sanitize-to-HTML helper used for read-only views (see the Rich Text section's note on rendering stored JSON as sanitized HTML), so the export matches the editor/preview exactly.
+- Structure the file: wrap the body in `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">` with a `<style>` block and a `<title>`, then build the body (e.g. document title as `<h1>`, each section heading as `<h2>`, content below). **Escape** any plain-text fields (names, citations, user-typed titles) before interpolating them into the HTML.
+- Trigger the download with a `Blob([html], { type: 'application/msword' })`, an object URL, and a programmatic `<a download="Name.doc">` click; revoke the URL after. Sanitize the filename (strip `\ / : * ? " < > |`).
+- **Keep the HTML *builder* a pure function, separate from the DOM/Blob download**, so the document structure is unit-testable without a browser (assert the `<h1>`/`<h2>`s, escaping, and conditional sections; leave the actual download untested).
+- Make the on-screen preview **mirror** the exported document (same title + `<h2>` section structure) so it's genuinely WYSIWYG — the preview *is* the spec for the export.
+
+**Escalation path:** if the user needs a true `.docx` (OOXML) — precise page layout, headers/footers, styled tables, page breaks, or strict compatibility with downstream Word tooling — switch to the **`docx`** library and write a small Tiptap-JSON → docx converter. It's more code and a real dependency, so only reach for it when the HTML-as-`.doc` output genuinely isn't enough. (Note: `mammoth` is the inverse — `.docx` → HTML for *reading* uploaded Word files — not a writer.)
 
 ## What to do when a task isn't covered here
 

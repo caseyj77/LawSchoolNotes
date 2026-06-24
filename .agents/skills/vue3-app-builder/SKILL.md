@@ -108,6 +108,22 @@ src/
 - **Row Level Security (RLS):** any Supabase table holding user data should have RLS policies enabled — don't rely on client-side checks alone to protect data. If a new table is added, flag this so RLS gets set up rather than assuming it's on by default (Supabase tables start with RLS disabled).
 - For Google OAuth specifically, the user will need the Google provider configured in the Supabase dashboard (Authentication → Providers) with a redirect URL set — this is a one-time per-project setup step worth reminding them about on a fresh project, since it's easy to forget and causes a silent redirect failure.
 
+### Per-user default / reference data under RLS (gotcha)
+
+**The trap:** once RLS policies are scoped to `auth.uid()`, any rows seeded for a *fixed* user id — e.g. a SQL migration that inserts a "default template," "starter categories," or any shared reference data owned by a stub user like `00000000-…0001` — become **invisible to every real signed-in user**. The policy filters them out, the query returns zero rows, and the feature silently renders empty with no error. It's easy to misdiagnose as "the data didn't get inserted" when it's really "RLS is hiding it." Migrations *can't* own this, because they run before any real user exists — there's nothing to attach per-user defaults to.
+
+**A tell that confirms it's RLS, not missing data:** foreign-key validation is **not** subject to RLS. So an `insert` that references the stub-owned default (e.g. a `case_brief` row pointing at the stub `template_id`) can *succeed* even though a `select` of that same default returns nothing. If writes work but reads come back empty, suspect RLS scoping before suspecting missing rows.
+
+**Pattern — provision per-user at runtime, in the store, on first use:**
+
+1. **Find** the user's own copy of the default data (`select … where user_id = auth.uid()`).
+2. **Create** it owned by the current user if none exists, and keep the real DB id it comes back with.
+3. **Reconcile**, don't just "insert if empty": insert any canonical items the user is missing *and* update rows whose definition has drifted (renamed label, new order/`position`, changed placeholder). "Insert only when the table is empty" silently strands existing users on the old set the moment you add or reorder a canonical item later.
+
+Define the canonical set **once in code** (e.g. `src/lib/<thing>.js`) as the single source of truth; the DB rows are just per-user instances of it. Cache the resolved per-user id (e.g. the template id) in the store so subsequent creates/saves reference the user's *own* row, never the stub default id.
+
+(Concretely: this surfaced in a case-brief app where the brief's "template sections" were seeded only for a stub user, so every real user saw an empty form. The fix was a `getTemplateSections()` that finds-or-creates the user's template, then reconciles missing/renamed/reordered sections against a code-defined canonical list.)
+
 ## State Management (Pinia) Conventions
 
 - One store per domain concept (`useAuthStore`, `useCartStore`) — avoid one giant catch-all store.
