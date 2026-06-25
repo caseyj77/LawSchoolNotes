@@ -114,6 +114,49 @@ export const useTasksStore = defineStore('tasks', () => {
     if (deleteError) throw deleteError
   }
 
+  // Focused date-only update for calendar drag/resize, so moving a bar doesn't
+  // need to round-trip the whole task form. Optimistic: the local task is
+  // mutated immediately (the calendar re-renders from it) and reverted if the
+  // write fails.
+  async function updateTaskSchedule(id, { startDate, dueDate }) {
+    const existing = tasks.value.find((task) => task.id === id)
+    const previous = existing ? { startDate: existing.startDate, dueDate: existing.dueDate } : null
+    if (existing) {
+      existing.startDate = startDate || null
+      existing.dueDate = dueDate || null
+    }
+
+    const { error: updateError } = await supabase
+      .from('tasks')
+      .update({ start_date: startDate || null, due_date: dueDate || null })
+      .eq('id', id)
+      .eq('user_id', getUserId())
+    if (updateError) {
+      if (existing && previous) Object.assign(existing, previous)
+      error.value = updateError
+      throw updateError
+    }
+  }
+
+  // Focused status update for the calendar's quick "mark done" toggle (the board
+  // uses persistAll for drag reorders, which also carries position).
+  async function setTaskStatus(id, status) {
+    const existing = tasks.value.find((task) => task.id === id)
+    const previous = existing?.status
+    if (existing) existing.status = status
+
+    const { error: updateError } = await supabase
+      .from('tasks')
+      .update({ status })
+      .eq('id', id)
+      .eq('user_id', getUserId())
+    if (updateError) {
+      if (existing) existing.status = previous
+      error.value = updateError
+      throw updateError
+    }
+  }
+
   // Called after a drag-and-drop reorder (within or across columns). The
   // dragged task objects are the same references held in `tasks`, so the
   // column arrays built from `tasks` already reflect the new status/position
@@ -139,6 +182,8 @@ export const useTasksStore = defineStore('tasks', () => {
     fetchTasks,
     addTask,
     updateTask,
+    updateTaskSchedule,
+    setTaskStatus,
     deleteTask,
     persistAll,
   }

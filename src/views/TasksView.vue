@@ -1,11 +1,8 @@
 <script setup>
-import { toTypedSchema } from '@vee-validate/zod'
-import { computed, onMounted, ref } from 'vue'
-import { useForm } from 'vee-validate'
+import { onMounted, ref } from 'vue'
 import draggable from 'vuedraggable'
-import { VueDatePicker } from '@vuepic/vue-datepicker'
 
-import { taskSchema } from '@/schemas/taskSchema'
+import TaskFormModal from '@/components/TaskFormModal.vue'
 import { TASK_STATUSES, useTasksStore } from '@/stores/tasksStore'
 import { useNotesStore } from '@/stores/notesStore'
 
@@ -56,54 +53,39 @@ async function handleDragEnd() {
   await tasksStore.persistAll()
 }
 
-const { defineField, errors, handleSubmit, resetForm, setValues } = useForm({
-  validationSchema: toTypedSchema(taskSchema),
-})
-const [title] = defineField('title')
-const [description] = defineField('description')
-const [startDate] = defineField('startDate')
-const [dueDate] = defineField('dueDate')
-const [tags] = defineField('tags')
-const [courseId] = defineField('courseId')
-
 const isFormOpen = ref(false)
-const editingTaskId = ref(null)
-const submitLabel = computed(() => (editingTaskId.value ? 'Save changes' : 'Add task'))
+const editingTask = ref(null)
 
 function openCreateForm() {
-  editingTaskId.value = null
-  resetForm()
+  editingTask.value = null
   isFormOpen.value = true
 }
 
 function openEditForm(task) {
-  editingTaskId.value = task.id
-  setValues({
-    title: task.title,
-    description: task.description,
-    startDate: task.startDate ?? '',
-    dueDate: task.dueDate ?? '',
-    tags: task.tags.join(', '),
-    courseId: task.courseId ?? '',
-  })
+  editingTask.value = task
   isFormOpen.value = true
 }
 
 function closeForm() {
   isFormOpen.value = false
-  editingTaskId.value = null
-  resetForm()
+  editingTask.value = null
 }
 
-const handleSubmitTask = handleSubmit(async (values) => {
-  if (editingTaskId.value) {
-    await tasksStore.updateTask(editingTaskId.value, values)
+async function handleFormSubmit({ id, values }) {
+  if (id) {
+    await tasksStore.updateTask(id, values)
   } else {
     await tasksStore.addTask(values)
   }
   syncColumnsFromStore()
   closeForm()
-})
+}
+
+async function handleFormDelete(id) {
+  await tasksStore.deleteTask(id)
+  syncColumnsFromStore()
+  closeForm()
+}
 
 async function handleDeleteTask(id) {
   await tasksStore.deleteTask(id)
@@ -122,58 +104,14 @@ async function handleDeleteTask(id) {
         <button type="button" class="add-task-button" @click="openCreateForm">+ New task</button>
       </div>
 
-      <form v-if="isFormOpen" class="task-form" @submit.prevent="handleSubmitTask">
-        <div class="task-form-fields">
-          <label>
-            Title
-            <input v-model.trim="title" type="text" placeholder="Outline Contracts Ch. 4">
-            <span v-if="errors.title" class="field-error">{{ errors.title }}</span>
-          </label>
-          <label>
-            Description
-            <input v-model.trim="description" type="text" placeholder="Optional notes">
-          </label>
-          <label>
-            Start date
-            <VueDatePicker
-              v-model="startDate"
-              model-type="yyyy-MM-dd"
-              format="MMM d, yyyy"
-              :enable-time-picker="false"
-              auto-apply
-              placeholder="Optional"
-            />
-          </label>
-          <label>
-            Due date
-            <VueDatePicker
-              v-model="dueDate"
-              model-type="yyyy-MM-dd"
-              format="MMM d, yyyy"
-              :enable-time-picker="false"
-              auto-apply
-              placeholder="Optional"
-            />
-          </label>
-          <label>
-            Tags
-            <input v-model.trim="tags" type="text" placeholder="reading, exam-prep">
-          </label>
-          <label>
-            Course
-            <select v-model="courseId" class="task-course-select">
-              <option value="">No course</option>
-              <option v-for="course in notesStore.courses" :key="course.id" :value="course.id">
-                {{ course.title }}
-              </option>
-            </select>
-          </label>
-        </div>
-        <div class="task-form-actions">
-          <button type="submit" class="save-button">{{ submitLabel }}</button>
-          <button type="button" class="cancel-button" @click="closeForm">Cancel</button>
-        </div>
-      </form>
+      <TaskFormModal
+        v-if="isFormOpen"
+        :task="editingTask"
+        :courses="notesStore.courses"
+        @submit="handleFormSubmit"
+        @delete="handleFormDelete"
+        @close="closeForm"
+      />
 
       <p v-if="isLoading" class="supporting-copy">Loading tasks…</p>
 
@@ -277,67 +215,6 @@ h2 {
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.task-form {
-  display: grid;
-  gap: 1rem;
-  padding: 1.25rem;
-  border-radius: 1rem;
-  background: var(--color-bg-alt);
-}
-
-.task-form-fields {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-}
-
-.task-form label {
-  display: grid;
-  gap: 0.4rem;
-  font-weight: 600;
-}
-
-.task-form input,
-.task-course-select {
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 0.9rem;
-  font: inherit;
-  background: var(--color-surface-alt);
-}
-
-.field-error {
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--color-error);
-}
-
-.task-form-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.save-button {
-  padding: 0.7rem 1.2rem;
-  border: 1px solid var(--color-active-border);
-  border-radius: 999px;
-  background: var(--color-active-bg);
-  color: var(--color-active-text);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.cancel-button {
-  padding: 0.7rem 1.2rem;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 999px;
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  cursor: pointer;
 }
 
 .supporting-copy {

@@ -10,6 +10,13 @@
     "test:unit": "vitest run"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/list": "^6.1.21",
+    "@fullcalendar/multimonth": "^6.1.21",
+    "@fullcalendar/timegrid": "^6.1.21",
+    "@fullcalendar/vue3": "^6.1.21",
     "@supabase/supabase-js": "^2.108.2",
     "@tiptap/pm": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
@@ -22,7 +29,6 @@
     "pinia": "^3.0.4",
     "vee-validate": "^4.15.1",
     "vue": "^3.5.38",
-    "vue-cal": "^5.0.1-rc.46",
     "vue-router": "^5.1.0",
     "vuedraggable": "^4.1.0",
     "zod": "^3.25.76"
